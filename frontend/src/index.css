@@ -1,0 +1,46 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", sans-serif;
+  --font-display: "Inter", sans-serif;
+
+  --color-canvas: #F8FAFC;
+  --color-surface: #FFFFFF;
+  --color-surface-soft: #F3F5F8;
+  --color-text-primary: #172033;
+  --color-text-secondary: #667085;
+  --color-text-muted: #98A2B3;
+  --color-border: #E6EAF0;
+  
+  --color-accent-primary: #6D63F6;
+  --color-accent-secondary: #8B83F7;
+  --color-accent-soft: #F0EEFF;
+
+  --shadow-soft: 0 4px 20px rgba(0, 0, 0, 0.03);
+  --shadow-float: 0 10px 40px rgba(0, 0, 0, 0.06);
+  --shadow-composer: 0 12px 32px rgba(0, 0, 0, 0.04);
+}
+
+@layer base {
+  body {
+    @apply bg-canvas text-text-primary font-sans antialiased min-h-screen overflow-x-hidden selection:bg-accent-soft selection:text-accent-primary;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-sans tracking-tight;
+  }
+}
+
+@layer utilities {
+  .glass-panel {
+    @apply bg-surface/80 backdrop-blur-xl border border-white/40 shadow-soft;
+  }
+  
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
