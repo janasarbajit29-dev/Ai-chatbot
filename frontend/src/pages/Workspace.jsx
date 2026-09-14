@@ -1,21 +1,36 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Header } from "../components/core/Header";
-import { AIOrb } from "../components/core/AIOrb";
+import { AIAvatar } from "../components/core/AIAvatar";
+import { AnimatedBackground } from "../components/core/AnimatedBackground";
 import { MainComposer } from "../components/chat/MainComposer";
 import { SmartPromptChips } from "../components/chat/SmartPromptChips";
 import { MessageList } from "../components/chat/MessageList";
+import { useAuthStore } from "../store/authStore";
+import { useNavigate } from "react-router-dom";
 
 export default function Workspace() {
   const [messages, setMessages] = useState([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const scrollRef = useRef(null);
+  const currentUser = useAuthStore((state) => state.currentUser);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!currentUser) {
+      navigate("/auth", { replace: true });
+    }
+  }, [currentUser, navigate]);
+
+  if (!currentUser) return null;
 
   const getGreeting = () => {
     const hour = new Date().getHours();
-    if (hour < 12) return "Good morning.";
-    if (hour < 18) return "Good afternoon.";
-    return "Good evening.";
+    let timeOfDay = "Good evening";
+    if (hour < 12) timeOfDay = "Good morning";
+    else if (hour < 18) timeOfDay = "Good afternoon";
+    
+    return `Hi ${currentUser.name}, how can I help you?`;
   };
 
   const handleSend = (text) => {
@@ -54,6 +69,7 @@ export default function Workspace() {
 
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col relative w-full h-full overflow-hidden">
+        <AnimatedBackground />
         
         {/* Empty State / Hero */}
         <AnimatePresence>
@@ -63,21 +79,16 @@ export default function Workspace() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0, scale: 0.95, filter: "blur(10px)", y: -40 }}
               transition={{ duration: 0.6, ease: [0.32, 0.72, 0, 1] }}
-              className="absolute inset-0 flex flex-col items-center justify-center px-4 z-0 pointer-events-none"
+              className="absolute inset-0 flex flex-col items-center justify-center px-4 z-0 pointer-events-none pb-[25vh]"
             >
               <motion.div layoutId="hero-orb" className="mb-10">
-                <AIOrb size="large" state="idle" />
+                <AIAvatar size="large" state="idle" />
               </motion.div>
               
               <motion.div layoutId="hero-text" className="text-center mb-16">
                 <h1 className="text-[2.25rem] leading-[1.2] md:text-5xl font-medium text-text-primary mb-4 tracking-tight">
                   {getGreeting()}
-                  <br/>
-                  <span className="text-text-secondary">Where should we explore today?</span>
                 </h1>
-                <p className="text-text-muted text-base">
-                  Think, create, explore and build with your AI workspace.
-                </p>
               </motion.div>
             </motion.div>
           )}
@@ -103,12 +114,12 @@ export default function Workspace() {
           layout
           initial={false}
           animate={{
-            bottom: isChatActive ? "32px" : "25%",
+            bottom: isChatActive ? "32px" : "12%",
           }}
           transition={{ duration: 0.7, ease: [0.32, 0.72, 0, 1] }}
           className="absolute inset-x-0 px-4 z-20 flex flex-col items-center pointer-events-auto"
         >
-          <div className="w-full max-w-3xl flex flex-col items-center">
+          <div className="w-full max-w-3xl flex flex-col items-center gap-6">
             <MainComposer 
               onSend={handleSend} 
               isGenerating={isGenerating} 
