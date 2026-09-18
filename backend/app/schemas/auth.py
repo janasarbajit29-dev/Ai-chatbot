@@ -1,5 +1,6 @@
 from pydantic import BaseModel, EmailStr, model_validator
 from datetime import date
+from app.schemas.user import UserResponse
 
 class SignupRequest(BaseModel):
     name: str
@@ -13,3 +14,12 @@ class SignupRequest(BaseModel):
         if self.password != self.confirm_password:
             raise ValueError("passwords do not match")
         return self
+
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str
+
+class LoginResponse(BaseModel):
+    access_token: str
+    token_type: str
+    user: UserResponse
