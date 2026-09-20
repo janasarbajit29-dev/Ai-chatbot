@@ -6,6 +6,7 @@ from jose import jwt, JWTError
 from app.database.connection import get_db
 from app.core.config import settings
 from app.models.user import User
+from app.services import auth_service
 
 security = HTTPBearer()
 
@@ -27,4 +28,5 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
     user = db.query(User).filter(User.id == int(user_id)).first()
     if user is None:
         raise credentials_exception
-    return user
+        
+    return auth_service.verify_user_activity(db, user)

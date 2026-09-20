@@ -4,14 +4,16 @@ import { useNavigate } from "react-router-dom";
 import { AnimatedBackground } from "../components/core/AnimatedBackground";
 import { AIAvatar } from "../components/core/AIAvatar";
 import { useAuthStore } from "../store/authStore";
+import { apiClient } from "../lib/axios";
 
 export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
   
   // Login State
-  const [loginName, setLoginName] = useState("");
+  const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [loginError, setLoginError] = useState("");
+  const [isLoginLoading, setIsLoginLoading] = useState(false);
 
   // Signup State
   const [signupName, setSignupName] = useState("");
@@ -20,11 +22,13 @@ export default function Auth() {
   const [signupConfirmPassword, setSignupConfirmPassword] = useState("");
   const [signupDob, setSignupDob] = useState("");
   const [signupError, setSignupError] = useState("");
+  const [isSignupLoading, setIsSignupLoading] = useState(false);
 
   const navigate = useNavigate();
-  const login = useAuthStore((state) => state.login);
-  const signup = useAuthStore((state) => state.signup);
+  const loginSuccess = useAuthStore((state) => state.loginSuccess);
   const currentUser = useAuthStore((state) => state.currentUser);
+  const sessionExpiredMessage = useAuthStore((state) => state.sessionExpiredMessage);
+  const setSessionExpiredMessage = useAuthStore((state) => state.setSessionExpiredMessage);
 
   useEffect(() => {
     if (currentUser) {
@@ -32,19 +36,43 @@ export default function Auth() {
     }
   }, [currentUser, navigate]);
 
-  const handleLoginSubmit = (e) => {
+  useEffect(() => {
+    if (sessionExpiredMessage) {
+      setLoginError(sessionExpiredMessage);
+      setSessionExpiredMessage(null);
+    }
+  }, [sessionExpiredMessage, setSessionExpiredMessage]);
+
+  const handleLoginSubmit = async (e) => {
     e.preventDefault();
     setLoginError("");
+    setIsLoginLoading(true);
     
-    const success = login(loginName.trim(), loginPassword);
-    if (success) {
+    try {
+      const response = await apiClient.post("/api/auth/login", {
+        email: loginEmail.trim(),
+        password: loginPassword,
+      });
+      
+      const { access_token, user } = response.data;
+      loginSuccess(user, access_token);
       navigate("/");
-    } else {
-      setLoginError("Invalid User Name or Password. Did you sign up first?");
+    } catch (error) {
+      if (!error.response) {
+        setLoginError("Unable to connect to the server. Please try again later.");
+      } else if (error.response.status === 401) {
+        setLoginError("Invalid email or password.");
+      } else if (error.response.status === 422) {
+        setLoginError("Invalid input format.");
+      } else {
+        setLoginError("Something went wrong. Please try again.");
+      }
+    } finally {
+      setIsLoginLoading(false);
     }
   };
 
-  const handleSignupSubmit = (e) => {
+  const handleSignupSubmit = async (e) => {
     e.preventDefault();
     setSignupError("");
 
@@ -53,22 +81,45 @@ export default function Auth() {
       return;
     }
 
-    // Save to mock frontend store
-    signup({
-      name: signupName.trim(),
-      email: signupEmail.trim(),
-      password: signupPassword,
-      dob: signupDob
-    });
+    setIsSignupLoading(true);
 
-    // Reset signup form and switch to login
-    setSignupName("");
-    setSignupEmail("");
-    setSignupPassword("");
-    setSignupConfirmPassword("");
-    setSignupDob("");
-    
-    setIsLogin(true);
+    try {
+      await apiClient.post("/api/auth/signup", {
+        name: signupName.trim(),
+        email: signupEmail.trim(),
+        password: signupPassword,
+        confirm_password: signupConfirmPassword,
+        date_of_birth: signupDob
+      });
+
+      // Reset signup form and switch to login
+      setSignupName("");
+      setSignupEmail("");
+      setSignupPassword("");
+      setSignupConfirmPassword("");
+      setSignupDob("");
+      
+      setIsLogin(true);
+    } catch (error) {
+      if (!error.response) {
+        setSignupError("Unable to connect to the server. Please try again later.");
+      } else if (error.response.status === 409) {
+        setSignupError("This email is already registered. Please log in.");
+      } else if (error.response.status === 422) {
+        const detail = error.response.data?.detail;
+        if (Array.isArray(detail) && detail.length > 0) {
+          setSignupError(detail[0].msg || "Invalid input data.");
+        } else if (typeof detail === "string") {
+          setSignupError(detail);
+        } else {
+          setSignupError("Please check your input data.");
+        }
+      } else {
+        setSignupError("Something went wrong. Please try again.");
+      }
+    } finally {
+      setIsSignupLoading(false);
+    }
   };
 
   const toggleAuthMode = () => {
@@ -108,11 +159,11 @@ export default function Auth() {
                   )}
                   <div>
                     <input
-                      type="text"
-                      placeholder="User Name"
+                      type="email"
+                      placeholder="Email Address"
                       required
-                      value={loginName}
-                      onChange={(e) => setLoginName(e.target.value)}
+                      value={loginEmail}
+                      onChange={(e) => setLoginEmail(e.target.value)}
                       className="w-full px-4 py-3 rounded-xl border border-border bg-surface-soft text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-accent-primary/50 transition-all"
                     />
                   </div>
@@ -129,9 +180,10 @@ export default function Auth() {
 
                   <button
                     type="submit"
-                    className="w-full mt-4 py-3 rounded-xl bg-accent-primary hover:bg-accent-secondary text-white font-medium transition-colors shadow-soft hover:shadow-float flex justify-center items-center gap-2"
+                    disabled={isLoginLoading}
+                    className={`w-full mt-4 py-3 rounded-xl ${isLoginLoading ? "bg-accent-primary/50 cursor-not-allowed" : "bg-accent-primary hover:bg-accent-secondary"} text-white font-medium transition-colors shadow-soft hover:shadow-float flex justify-center items-center gap-2`}
                   >
-                    Access Workspace
+                    {isLoginLoading ? "Accessing..." : "Access Workspace"}
                   </button>
                 </form>
 
@@ -216,9 +268,10 @@ export default function Auth() {
                   
                   <button
                     type="submit"
-                    className="w-full mt-4 py-3 rounded-xl bg-accent-primary hover:bg-accent-secondary text-white font-medium transition-colors shadow-soft hover:shadow-float flex justify-center items-center gap-2"
+                    disabled={isSignupLoading}
+                    className={`w-full mt-4 py-3 rounded-xl ${isSignupLoading ? "bg-accent-primary/50 cursor-not-allowed" : "bg-accent-primary hover:bg-accent-secondary"} text-white font-medium transition-colors shadow-soft hover:shadow-float flex justify-center items-center gap-2`}
                   >
-                    Create Account
+                    {isSignupLoading ? "Creating Account..." : "Create Account"}
                   </button>
                 </form>
 

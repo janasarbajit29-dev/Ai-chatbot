@@ -3,7 +3,29 @@ from fastapi import HTTPException, status
 from app.models.user import User
 from app.schemas.auth import SignupRequest, LoginRequest
 from app.core.security import get_password_hash, verify_password
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
+
+def verify_user_activity(db: Session, user: User) -> User:
+    if user.last_active:
+        now = datetime.now(timezone.utc)
+        last_active = user.last_active
+        
+        # Ensure timezone-aware datetime for comparison
+        if last_active.tzinfo is None:
+            last_active = last_active.replace(tzinfo=timezone.utc)
+            
+        time_since_active = now - last_active
+        if time_since_active > timedelta(days=5):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Session expired due to 5 days of inactivity. Please log in again."
+            )
+            
+    # Update last_active for the current valid request
+    user.last_active = datetime.now(timezone.utc)
+    db.commit()
+    db.refresh(user)
+    return user
 
 def create_user(db: Session, user_in: SignupRequest) -> User:
     # Check if email exists
