@@ -1,8 +1,18 @@
 import { motion } from "framer-motion";
-import { History, Search, Settings, User } from "lucide-react";
+import { History, Search, Settings, User, LogOut } from "lucide-react";
 import { AIOrb } from "./AIOrb";
+import { useAuthStore } from "../../store/authStore";
+import { useNavigate } from "react-router-dom";
 
 export const Header = () => {
+  const logout = useAuthStore((state) => state.logout);
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate("/auth");
+  };
+
   return (
     <motion.header 
       initial={{ y: -20, opacity: 0 }}
@@ -29,13 +39,17 @@ export const Header = () => {
         <HeaderButton icon={<Settings size={18} />} />
         <div className="hidden md:block w-px h-4 bg-border mx-1"></div>
         <HeaderButton icon={<User size={18} />} />
+        <HeaderButton icon={<LogOut size={18} />} onClick={handleLogout} />
       </div>
     </motion.header>
   );
 };
 
-const HeaderButton = ({ icon }) => (
-  <button className="p-2.5 text-text-secondary hover:text-text-primary hover:bg-surface rounded-full transition-all duration-200 hover:shadow-sm hover:-translate-y-0.5 active:scale-95">
+const HeaderButton = ({ icon, onClick }) => (
+  <button 
+    onClick={onClick}
+    className="p-2.5 text-text-secondary hover:text-text-primary hover:bg-surface rounded-full transition-all duration-200 hover:shadow-sm hover:-translate-y-0.5 active:scale-95"
+  >
     {icon}
   </button>
 );
