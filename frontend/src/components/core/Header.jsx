@@ -2,22 +2,15 @@ import { motion } from "framer-motion";
 import { History, Search, Settings, User, LogOut } from "lucide-react";
 import { AIOrb } from "./AIOrb";
 import { useAuthStore } from "../../store/authStore";
-import { removeToken, removeUser } from "../../utils/auth";
 import { useNavigate } from "react-router-dom";
 
-export const Header = ({ onToggleHistory }) => {
+export const Header = () => {
   const logout = useAuthStore((state) => state.logout);
   const navigate = useNavigate();
 
   const handleLogout = () => {
-    if (typeof window !== "undefined" && window.speechSynthesis) {
-      window.speechSynthesis.cancel();
-    }
-
-    removeToken();
-    removeUser();
     logout();
-    navigate("/auth", { replace: true });
+    navigate("/auth");
   };
 
   return (
@@ -45,17 +38,16 @@ export const Header = ({ onToggleHistory }) => {
         <HeaderButton icon={<Search size={18} />} title="Search" />
         <HeaderButton icon={<Settings size={18} />} title="Settings" />
         <div className="hidden md:block w-px h-4 bg-border mx-1"></div>
-        <HeaderButton icon={<User size={18} />} title="Profile" />
-        <HeaderButton icon={<LogOut size={18} />} onClick={handleLogout} title="Logout" />
+        <HeaderButton icon={<User size={18} />} />
+        <HeaderButton icon={<LogOut size={18} />} onClick={handleLogout} />
       </div>
     </motion.header>
   );
 };
 
-const HeaderButton = ({ icon, onClick, title }) => (
+const HeaderButton = ({ icon, onClick }) => (
   <button 
     onClick={onClick}
-    title={title}
     className="p-2.5 text-text-secondary hover:text-text-primary hover:bg-surface rounded-full transition-all duration-200 hover:shadow-sm hover:-translate-y-0.5 active:scale-95"
   >
     {icon}
