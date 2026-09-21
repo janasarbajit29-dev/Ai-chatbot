@@ -1,8 +1,11 @@
 from datetime import date, datetime
-from typing import Optional
+from typing import Optional, List, TYPE_CHECKING
 from sqlalchemy import String, Date, DateTime, func
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database.base import Base
+
+if TYPE_CHECKING:
+    from app.models.conversation import Conversation
 
 class User(Base):
     __tablename__ = "users"
@@ -23,4 +26,8 @@ class User(Base):
     )
     last_active: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True), nullable=True
+    )
+
+    conversations: Mapped[List["Conversation"]] = relationship(
+        "Conversation", back_populates="user", cascade="all, delete-orphan"
     )

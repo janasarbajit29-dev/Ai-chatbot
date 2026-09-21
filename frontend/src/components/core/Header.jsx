@@ -1,8 +1,25 @@
 import { motion } from "framer-motion";
-import { History, Search, Settings, User } from "lucide-react";
+import { History, Search, Settings, User, LogOut } from "lucide-react";
 import { AIOrb } from "./AIOrb";
+import { useAuthStore } from "../../store/authStore";
+import { removeToken, removeUser } from "../../utils/auth";
+import { useNavigate } from "react-router-dom";
 
-export const Header = () => {
+export const Header = ({ onToggleHistory }) => {
+  const logout = useAuthStore((state) => state.logout);
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    if (typeof window !== "undefined" && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+
+    removeToken();
+    removeUser();
+    logout();
+    navigate("/auth", { replace: true });
+  };
+
   return (
     <motion.header 
       initial={{ y: -20, opacity: 0 }}
@@ -24,18 +41,23 @@ export const Header = () => {
 
       {/* Right: Actions */}
       <div className="flex items-center gap-1 md:gap-2">
-        <HeaderButton icon={<History size={18} />} />
-        <HeaderButton icon={<Search size={18} />} />
-        <HeaderButton icon={<Settings size={18} />} />
+        <HeaderButton icon={<History size={18} />} onClick={onToggleHistory} title="History" />
+        <HeaderButton icon={<Search size={18} />} title="Search" />
+        <HeaderButton icon={<Settings size={18} />} title="Settings" />
         <div className="hidden md:block w-px h-4 bg-border mx-1"></div>
-        <HeaderButton icon={<User size={18} />} />
+        <HeaderButton icon={<User size={18} />} title="Profile" />
+        <HeaderButton icon={<LogOut size={18} />} onClick={handleLogout} title="Logout" />
       </div>
     </motion.header>
   );
 };
 
-const HeaderButton = ({ icon }) => (
-  <button className="p-2.5 text-text-secondary hover:text-text-primary hover:bg-surface rounded-full transition-all duration-200 hover:shadow-sm hover:-translate-y-0.5 active:scale-95">
+const HeaderButton = ({ icon, onClick, title }) => (
+  <button 
+    onClick={onClick}
+    title={title}
+    className="p-2.5 text-text-secondary hover:text-text-primary hover:bg-surface rounded-full transition-all duration-200 hover:shadow-sm hover:-translate-y-0.5 active:scale-95"
+  >
     {icon}
   </button>
 );

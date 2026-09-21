@@ -3,6 +3,9 @@ import { create } from 'zustand';
 export const useAuthStore = create((set, get) => ({
   currentUser: null, // { name: string, ... }
   users: [], // Array of registered users
+  hasSpokenGreeting: false,
+
+  setHasSpokenGreeting: (val) => set({ hasSpokenGreeting: val }),
 
   signup: (userData) => {
     set((state) => ({
@@ -10,16 +13,15 @@ export const useAuthStore = create((set, get) => ({
     }));
   },
 
-  login: (name, password) => {
-    const { users } = get();
-    const foundUser = users.find(u => u.name === name && u.password === password);
-    
-    if (foundUser) {
-      set({ currentUser: foundUser });
-      return true;
-    }
-    return false;
+  login: (userData) => {
+    set({ currentUser: userData });
+    return true;
   },
 
-  logout: () => set({ currentUser: null }),
+  logout: () => {
+    if (typeof window !== "undefined" && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+    set({ currentUser: null, hasSpokenGreeting: false });
+  },
 }));

@@ -4,12 +4,14 @@ import { useNavigate } from "react-router-dom";
 import { AnimatedBackground } from "../components/core/AnimatedBackground";
 import { AIAvatar } from "../components/core/AIAvatar";
 import { useAuthStore } from "../store/authStore";
+import { apiClient } from "../lib/axios";
+import { setToken, setUser as setLocalUser } from "../utils/auth";
 
 export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
   
   // Login State
-  const [loginName, setLoginName] = useState("");
+  const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [loginError, setLoginError] = useState("");
 
@@ -32,15 +34,40 @@ export default function Auth() {
     }
   }, [currentUser, navigate]);
 
-  const handleLoginSubmit = (e) => {
+  const handleLoginSubmit = async (e) => {
     e.preventDefault();
     setLoginError("");
     
-    const success = login(loginName.trim(), loginPassword);
-    if (success) {
+    try {
+      console.log("Login request for email:", loginEmail.trim());
+      const response = await apiClient.post("/auth/login", {
+        email: loginEmail.trim(),
+        password: loginPassword,
+      });
+
+      console.log("Response status:", response.status);
+      console.log("Response data keys:", Object.keys(response.data));
+
+      const { access_token, user } = response.data;
+      
+      setToken(access_token);
+      setLocalUser(user);
+      login(user); // update Zustand state
+      
       navigate("/");
-    } else {
-      setLoginError("Invalid User Name or Password. Did you sign up first?");
+    } catch (error) {
+      if (error.response) {
+        if (error.response.status === 401) {
+          setLoginError("Invalid email or password.");
+        } else if (error.response.status === 422) {
+          const detail = error.response.data.detail;
+          setLoginError(typeof detail === 'string' ? detail : JSON.stringify(detail));
+        } else {
+          setLoginError("An error occurred during login.");
+        }
+      } else {
+        setLoginError("Network error. Please try again.");
+      }
     }
   };
 
@@ -108,11 +135,11 @@ export default function Auth() {
                   )}
                   <div>
                     <input
-                      type="text"
-                      placeholder="User Name"
+                      type="email"
+                      placeholder="Email Address"
                       required
-                      value={loginName}
-                      onChange={(e) => setLoginName(e.target.value)}
+                      value={loginEmail}
+                      onChange={(e) => setLoginEmail(e.target.value)}
                       className="w-full px-4 py-3 rounded-xl border border-border bg-surface-soft text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-accent-primary/50 transition-all"
                     />
                   </div>
