@@ -34,9 +34,9 @@ export const Header = () => {
 
       {/* Right: Actions */}
       <div className="flex items-center gap-1 md:gap-2">
-        <HeaderButton icon={<History size={18} />} />
-        <HeaderButton icon={<Search size={18} />} />
-        <HeaderButton icon={<Settings size={18} />} />
+        <HeaderButton icon={<History size={18} />} onClick={onToggleHistory} title="History" />
+        <HeaderButton icon={<Search size={18} />} title="Search" />
+        <HeaderButton icon={<Settings size={18} />} title="Settings" />
         <div className="hidden md:block w-px h-4 bg-border mx-1"></div>
         <HeaderButton icon={<User size={18} />} />
         <HeaderButton icon={<LogOut size={18} />} onClick={handleLogout} />

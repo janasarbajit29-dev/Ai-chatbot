@@ -53,8 +53,9 @@ export const MainComposer = ({ onSend, isGenerating, onStop }) => {
             handleSend();
           }
         }}
+        disabled={isGenerating}
         placeholder="Ask anything, upload a file, or start a thought..."
-        className="w-full bg-transparent resize-none outline-none text-text-primary placeholder:text-text-muted py-3.5 px-2 min-h-[52px] max-h-[200px] text-[16px] leading-relaxed hide-scrollbar"
+        className={`w-full bg-transparent resize-none outline-none text-text-primary placeholder:text-text-muted py-3.5 px-2 min-h-[52px] max-h-[200px] text-[16px] leading-relaxed hide-scrollbar ${isGenerating ? 'opacity-50 cursor-not-allowed' : ''}`}
         rows={1}
       />
 

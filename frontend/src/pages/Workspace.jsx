@@ -8,13 +8,34 @@ import { SmartPromptChips } from "../components/chat/SmartPromptChips";
 import { MessageList } from "../components/chat/MessageList";
 import { useAuthStore } from "../store/authStore";
 import { useNavigate } from "react-router-dom";
+import { getGreetingText } from "../utils/greeting";
+import { speak } from "../utils/speech";
+
+import { useChatStore } from "../store/chatStore";
+import { Sidebar } from "../components/chat/Sidebar";
 
 export default function Workspace() {
-  const [messages, setMessages] = useState([]);
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [showSidebar, setShowSidebar] = useState(false);
   const scrollRef = useRef(null);
+  
   const currentUser = useAuthStore((state) => state.currentUser);
+  const hasSpokenGreeting = useAuthStore((state) => state.hasSpokenGreeting);
+  const setHasSpokenGreeting = useAuthStore((state) => state.setHasSpokenGreeting);
   const navigate = useNavigate();
+  const hasSpokenLocal = useRef(false);
+
+  const { 
+    conversations, 
+    activeConversation, 
+    messages, 
+    isGenerating, 
+    fetchConversations, 
+    createConversation, 
+    selectConversation, 
+    sendMessage, 
+    deleteConversation,
+    stopGenerating
+  } = useChatStore();
 
   const hasSpokenGreeting = useAuthStore((state) => state.hasSpokenGreeting);
   const setHasSpokenGreeting = useAuthStore((state) => state.setHasSpokenGreeting);
@@ -22,8 +43,31 @@ export default function Workspace() {
   useEffect(() => {
     if (!currentUser) {
       navigate("/auth", { replace: true });
+    } else {
+      fetchConversations();
     }
-  }, [currentUser, navigate]);
+  }, [currentUser, navigate, fetchConversations]);
+
+  useEffect(() => {
+    if (!currentUser) return;
+
+    if (hasSpokenGreeting || hasSpokenLocal.current) {
+      return;
+    }
+
+    let isMounted = true;
+    const timer = setTimeout(() => {
+      if (!isMounted) return;
+      hasSpokenLocal.current = true;
+      setHasSpokenGreeting(true);
+      speak(getGreetingText(currentUser.name));
+    }, 800);
+
+    return () => {
+      isMounted = false;
+      clearTimeout(timer);
+    };
+  }, [currentUser, hasSpokenGreeting, setHasSpokenGreeting]);
 
   useEffect(() => {
     if (!currentUser) return;
@@ -51,32 +95,14 @@ export default function Workspace() {
 
   if (!currentUser) return null;
 
-  const getGreeting = () => {
-    const hour = new Date().getHours();
-    let timeOfDay = "Good evening";
-    if (hour < 12) timeOfDay = "Good morning";
-    else if (hour < 18) timeOfDay = "Good afternoon";
-    
-    return `Hi ${currentUser.name}, how can I help you?`;
-  };
+  const getGreeting = () => getGreetingText(currentUser.name);
 
-  const handleSend = (text) => {
-    setMessages(prev => [...prev, { id: Date.now(), role: "user", content: text }]);
-    setIsGenerating(true);
-    
-    // Simulate AI response
-    setTimeout(() => {
-      setIsGenerating(false);
-      setMessages(prev => [...prev, { 
-        id: Date.now() + 1, 
-        role: "assistant", 
-        content: "This is a simulated response. The UI has transitioned smoothly into the chat workspace, presenting a clean and spacious reading experience. The AI Orb provides a calm ambient presence, and micro-interactions make the interface feel alive." 
-      }]);
-    }, 2500);
+  const handleSend = async (text) => {
+    await sendMessage(text);
   };
 
   const handleStop = () => {
-    setIsGenerating(false);
+    stopGenerating();
   };
 
   useEffect(() => {
@@ -88,11 +114,21 @@ export default function Workspace() {
     }
   }, [messages, isGenerating]);
 
-  const isChatActive = messages.length > 0;
+  const isChatActive = activeConversation !== null || messages.length > 0;
 
   return (
     <div className="relative h-screen bg-canvas flex flex-col overflow-hidden">
-      <Header />
+      <Sidebar 
+        isOpen={showSidebar}
+        onClose={() => setShowSidebar(false)}
+        conversations={conversations}
+        activeConversation={activeConversation}
+        onSelect={selectConversation}
+        onNewChat={createConversation}
+        onDelete={deleteConversation}
+      />
+
+      <Header onToggleHistory={() => setShowSidebar(true)} />
 
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col relative w-full h-full overflow-hidden">
@@ -128,7 +164,7 @@ export default function Workspace() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.3, duration: 0.5 }}
-              className="flex-1 overflow-y-auto w-full relative z-10 scroll-smooth hide-scrollbar"
+              className="flex-1 overflow-y-auto w-full relative z-10 scroll-smooth hide-scrollbar pb-32 pt-20"
               ref={scrollRef}
             >
               <MessageList messages={messages} isGenerating={isGenerating} />

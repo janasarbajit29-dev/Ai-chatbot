@@ -1,4 +1,4 @@
-﻿fastapi
+fastapi
 uvicorn[standard]
 sqlalchemy
 psycopg2-binary
@@ -12,3 +12,4 @@ email-validator
 python-multipart
 pytest
 httpx
+google-genai==2.24.0
