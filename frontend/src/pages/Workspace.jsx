@@ -80,10 +80,15 @@ export default function Workspace() {
 
   useEffect(() => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTo({
-        top: scrollRef.current.scrollHeight,
-        behavior: "smooth"
-      });
+      const { scrollHeight, clientHeight, scrollTop } = scrollRef.current;
+      const isNearBottom = scrollHeight - clientHeight - scrollTop < 150;
+      
+      if (isNearBottom || !isGenerating) {
+        scrollRef.current.scrollTo({
+          top: scrollRef.current.scrollHeight,
+          behavior: isGenerating ? "auto" : "smooth"
+        });
+      }
     }
   }, [messages, isGenerating]);
 

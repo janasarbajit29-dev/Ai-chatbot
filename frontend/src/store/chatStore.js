@@ -50,8 +50,8 @@ export const useChatStore = create((set, get) => ({
     }
   },
 
-  sendMessage: async (content) => {
-    let { activeConversation } = get();
+  sendMessage: async (content, regenerateMessageId = null) => {
+    let { activeConversation, messages } = get();
     
     if (!activeConversation) {
       try {
@@ -61,18 +61,31 @@ export const useChatStore = create((set, get) => ({
       }
     }
 
-    const userMessageId = Date.now().toString() + "-user";
-    const assistantMessageId = Date.now().toString() + "-assistant";
+    let actualContent = content;
+    const userMessageId = regenerateMessageId ? null : Date.now().toString() + "-user";
+    const assistantMessageId = regenerateMessageId || Date.now().toString() + "-assistant";
 
-    set((state) => ({
-      isGenerating: true,
-      error: null,
-      messages: [
-        ...state.messages,
-        { id: userMessageId, role: "user", content },
-        { id: assistantMessageId, role: "assistant", content: "" }
-      ]
-    }));
+    if (regenerateMessageId) {
+      const msgIndex = messages.findIndex(m => m.id === regenerateMessageId);
+      if (msgIndex > 0) {
+        actualContent = messages[msgIndex - 1].content;
+      }
+      set((state) => ({
+        isGenerating: true,
+        error: null,
+        messages: state.messages.map(m => m.id === regenerateMessageId ? { ...m, content: "", isError: false } : m)
+      }));
+    } else {
+      set((state) => ({
+        isGenerating: true,
+        error: null,
+        messages: [
+          ...state.messages,
+          { id: userMessageId, role: "user", content: actualContent },
+          { id: assistantMessageId, role: "assistant", content: "", isError: false }
+        ]
+      }));
+    }
 
     const controller = new AbortController();
     set({ abortController: controller });
@@ -89,7 +102,7 @@ export const useChatStore = create((set, get) => ({
         },
         body: JSON.stringify({
           conversation_id: activeConversation.id,
-          content
+          content: actualContent
         }),
         signal: controller.signal
       });
@@ -126,23 +139,27 @@ export const useChatStore = create((set, get) => ({
                 } else if (data.type === "done") {
                   set((state) => ({
                     messages: state.messages.map((m) => 
-                      m.id === assistantMessageId ? { ...m, id: data.message_id } : m
+                      m.id === assistantMessageId ? { ...m, id: data.message_id, isError: false } : m
                     ),
                     isGenerating: false,
                     abortController: null
                   }));
                   get().fetchConversations();
                 } else if (data.type === "start") {
-                  set((state) => ({
-                    messages: state.messages.map((m) => 
-                      m.id === userMessageId ? { ...m, id: data.user_message_id } : m
-                    )
-                  }));
+                  if (userMessageId) {
+                    set((state) => ({
+                      messages: state.messages.map((m) => 
+                        m.id === userMessageId ? { ...m, id: data.user_message_id } : m
+                      )
+                    }));
+                  }
                 } else if (data.type === "error") {
                   throw new Error(data.content);
                 }
               } catch (e) {
-                console.error("Stream parse error:", e);
+                if (e.message !== "Unexpected end of JSON input" && !e.message.includes("is not valid JSON")) {
+                  console.error("Stream parse error:", e);
+                }
               }
             }
           }
@@ -152,7 +169,10 @@ export const useChatStore = create((set, get) => ({
       if (error.name === "AbortError") {
         console.log("Stream aborted");
       } else {
-        set({ error: error.message });
+        set((state) => ({ 
+          error: error.message,
+          messages: state.messages.map(m => m.id === assistantMessageId ? { ...m, isError: true } : m)
+        }));
       }
       set({ isGenerating: false, abortController: null });
     }
