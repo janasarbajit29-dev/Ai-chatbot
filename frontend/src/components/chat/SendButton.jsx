@@ -5,12 +5,16 @@ export const SendButton = ({ onClick, isGenerating, hasInput }) => {
   return (
     <motion.button
       onClick={onClick}
-      whileHover={{ scale: 1.05 }}
+      whileHover={{ 
+        scale: 1.05,
+        backgroundColor: isGenerating ? "#FEE2E2" : undefined,
+        color: isGenerating ? "#EF4444" : undefined
+      }}
       whileTap={{ scale: 0.95 }}
       initial={false}
       animate={{
-        backgroundColor: isGenerating ? "#F3F5F8" : (hasInput ? "#172033" : "#F3F5F8"),
-        color: isGenerating ? "#172033" : (hasInput ? "#FFFFFF" : "#98A2B3"),
+        backgroundColor: isGenerating ? "#172033" : (hasInput ? "#172033" : "#F3F5F8"),
+        color: isGenerating ? "#FFFFFF" : (hasInput ? "#FFFFFF" : "#98A2B3"),
         y: isGenerating ? 0 : [0, -2, 0] // floating idle if not generating
       }}
       transition={{
@@ -19,6 +23,7 @@ export const SendButton = ({ onClick, isGenerating, hasInput }) => {
         color: { duration: 0.2 }
       }}
       className="relative p-2.5 rounded-full ml-1 overflow-hidden"
+      title={isGenerating ? "Stop generating" : "Send message"}
     >
       <motion.div
         initial={false}
