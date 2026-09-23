@@ -1,24 +1,50 @@
-export const setToken = (token) => {
-  localStorage.setItem('aura_access_token', token);
+const TOKEN_KEY = 'aura_access_token';
+const USER_KEY = 'aura_user';
+
+export const getAccessToken = () => {
+  return localStorage.getItem(TOKEN_KEY);
 };
 
-export const getToken = () => {
-  return localStorage.getItem('aura_access_token');
+export const setAccessToken = (token) => {
+  if (token) {
+    localStorage.setItem(TOKEN_KEY, token);
+  }
 };
 
-export const removeToken = () => {
-  localStorage.removeItem('aura_access_token');
+export const removeAccessToken = () => {
+  localStorage.removeItem(TOKEN_KEY);
 };
 
-export const setUser = (user) => {
-  localStorage.setItem('aura_user', JSON.stringify(user));
+export const getStoredUser = () => {
+  const userStr = localStorage.getItem(USER_KEY);
+  if (!userStr) return null;
+  
+  try {
+    return JSON.parse(userStr);
+  } catch (error) {
+    console.error('Invalid user data in storage. Clearing auth storage.');
+    clearAuthStorage();
+    return null;
+  }
 };
 
-export const getUser = () => {
-  const user = localStorage.getItem('aura_user');
-  return user ? JSON.parse(user) : null;
+export const setStoredUser = (user) => {
+  if (user) {
+    // Only store safe fields
+    const safeUser = {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+    };
+    localStorage.setItem(USER_KEY, JSON.stringify(safeUser));
+  }
 };
 
-export const removeUser = () => {
-  localStorage.removeItem('aura_user');
+export const removeStoredUser = () => {
+  localStorage.removeItem(USER_KEY);
+};
+
+export const clearAuthStorage = () => {
+  removeAccessToken();
+  removeStoredUser();
 };
