@@ -14,6 +14,17 @@ class ConversationCreate(BaseModel):
                 return None
         return v
 
+class ConversationUpdate(BaseModel):
+    title: str = Field(..., min_length=1, max_length=200)
+
+    @field_validator('title')
+    @classmethod
+    def validate_title(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("Title cannot be empty")
+        return v
+
 class ConversationResponse(BaseModel):
     id: int
     title: Optional[str]

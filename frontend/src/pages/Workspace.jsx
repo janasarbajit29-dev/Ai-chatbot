@@ -34,7 +34,8 @@ export default function Workspace() {
     selectConversation, 
     sendMessage, 
     deleteConversation,
-    stopGenerating
+    stopGenerating,
+    clearActive
   } = useChatStore();
 
   const hasSpokenGreeting = useAuthStore((state) => state.hasSpokenGreeting);
@@ -122,21 +123,22 @@ export default function Workspace() {
   const isChatActive = activeConversation !== null || messages.length > 0;
 
   return (
-    <div className="relative h-screen bg-canvas flex flex-col overflow-hidden">
+    <div className="relative h-screen bg-canvas flex overflow-hidden">
       <Sidebar 
         isOpen={showSidebar}
         onClose={() => setShowSidebar(false)}
         conversations={conversations}
         activeConversation={activeConversation}
         onSelect={selectConversation}
-        onNewChat={createConversation}
+        onNewChat={clearActive}
         onDelete={deleteConversation}
       />
 
-      <Header onToggleHistory={() => setShowSidebar(true)} />
+      <div className="flex-1 flex flex-col relative min-w-0 h-full overflow-hidden">
+        <Header onToggleSidebar={() => setShowSidebar(!showSidebar)} isOpen={showSidebar} />
 
-      {/* Main Content Area */}
-      <main className="flex-1 flex flex-col relative w-full h-full overflow-hidden">
+        {/* Main Content Area */}
+        <main className="flex-1 flex flex-col relative w-full h-full overflow-hidden">
         <AnimatedBackground />
         
         {/* Empty State / Hero */}
@@ -208,8 +210,8 @@ export default function Workspace() {
             </AnimatePresence>
           </div>
         </motion.div>
-
-      </main>
+        </main>
+      </div>
     </div>
   );
 }

@@ -61,6 +61,12 @@ export const useChatStore = create((set, get) => ({
       }
     }
 
+    if (activeConversation.title === "New Chat" || activeConversation.title === "New Conversation") {
+      let newTitle = content.split('\n')[0].substring(0, 30).trim();
+      if (newTitle.length === 30) newTitle += "...";
+      get().renameConversation(activeConversation.id, newTitle).catch(() => {});
+    }
+
     let actualContent = content;
     const userMessageId = regenerateMessageId ? null : Date.now().toString() + "-user";
     const assistantMessageId = regenerateMessageId || Date.now().toString() + "-assistant";
@@ -175,6 +181,19 @@ export const useChatStore = create((set, get) => ({
         }));
       }
       set({ isGenerating: false, abortController: null });
+    }
+  },
+
+  renameConversation: async (conversationId, newTitle) => {
+    try {
+      const response = await apiClient.patch(`/conversations/${conversationId}`, { title: newTitle });
+      set((state) => ({
+        conversations: state.conversations.map(c => c.id === conversationId ? { ...c, title: response.data.title } : c),
+        activeConversation: state.activeConversation?.id === conversationId ? { ...state.activeConversation, title: response.data.title } : state.activeConversation
+      }));
+    } catch (error) {
+      set({ error: error.message });
+      throw error;
     }
   },
 
