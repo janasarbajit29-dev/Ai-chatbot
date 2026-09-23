@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 from app.models.conversation import Conversation
-from app.schemas.conversation import ConversationCreate
+from app.schemas.conversation import ConversationCreate, ConversationUpdate
 
 def create_conversation(db: Session, user_id: int, schema: ConversationCreate) -> Conversation:
     title = schema.title or "New Conversation"
@@ -24,3 +24,10 @@ def delete_conversation(db: Session, user_id: int, conversation_id: int) -> None
     conv = get_conversation_by_id(db, user_id, conversation_id)
     db.delete(conv)
     db.commit()
+
+def update_conversation(db: Session, user_id: int, conversation_id: int, schema: ConversationUpdate) -> Conversation:
+    conv = get_conversation_by_id(db, user_id, conversation_id)
+    conv.title = schema.title
+    db.commit()
+    db.refresh(conv)
+    return conv

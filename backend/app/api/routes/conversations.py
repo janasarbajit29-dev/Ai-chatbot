@@ -5,7 +5,7 @@ from typing import List
 from app.api.deps import get_current_user
 from app.database.connection import get_db
 from app.models.user import User
-from app.schemas.conversation import ConversationCreate, ConversationResponse
+from app.schemas.conversation import ConversationCreate, ConversationResponse, ConversationUpdate
 from app.services import conversation_service
 
 router = APIRouter(tags=["Conversations"])
@@ -40,3 +40,12 @@ def delete_conversation(
     current_user: User = Depends(get_current_user)
 ):
     conversation_service.delete_conversation(db, current_user.id, conversation_id)
+
+@router.patch("/{conversation_id}", response_model=ConversationResponse, summary="Update a specific conversation")
+def update_conversation(
+    conversation_id: int,
+    schema: ConversationUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    return conversation_service.update_conversation(db, current_user.id, conversation_id, schema)
