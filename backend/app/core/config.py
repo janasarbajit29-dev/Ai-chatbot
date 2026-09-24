@@ -8,6 +8,9 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     GEMINI_API_KEY: str
     GEMINI_MODEL: str = "gemini-3.6-flash"
+    DOCUMENT_CHUNK_SIZE: int = 1000
+    DOCUMENT_CHUNK_OVERLAP: int = 200
+    EMBEDDING_MODEL: str = "gemini-embedding-2"
 
     model_config = SettingsConfigDict(
         env_file=".env",
