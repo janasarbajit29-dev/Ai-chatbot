@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { X, MessageSquare, Plus, Trash2, Edit2, FileText, UploadCloud, Loader2 } from "lucide-react";
+import { X, MessageSquare, Plus, Trash2, Edit2, FileText, UploadCloud, Loader2, Check, AlertCircle, RefreshCw } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { useChatStore } from "../../store/chatStore";
 import { useDocumentStore } from "../../store/documentStore";
@@ -18,7 +18,7 @@ export const Sidebar = ({
   const [renameValue, setRenameValue] = useState("");
   const renameConversation = useChatStore(state => state.renameConversation);
 
-  const { documents, isLoadingDocuments, isUploading, fetchDocuments, uploadDocument, deleteDocument } = useDocumentStore();
+  const { documents, isLoadingDocuments, isUploading, fetchDocuments, uploadDocument, deleteDocument, processDocument } = useDocumentStore();
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -229,12 +229,39 @@ export const Sidebar = ({
                         <span className="text-sm truncate text-text-primary" title={doc.original_filename}>
                           {doc.original_filename}
                         </span>
-                        <span className="text-[10px] text-text-secondary/60 mt-0.5 truncate uppercase">
-                          {doc.file_type} • {(doc.file_size / 1024 / 1024).toFixed(2)} MB
-                        </span>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-[10px] text-text-secondary/60 truncate uppercase">
+                            {doc.file_type} • {(doc.file_size / 1024 / 1024).toFixed(2)} MB
+                          </span>
+                          
+                          {(doc.processing_status === 'processing' || doc.processing_status === 'uploaded') && (
+                            <span className="flex items-center gap-1 text-[10px] text-accent-primary/80">
+                              <Loader2 size={10} className="animate-spin" /> Processing
+                            </span>
+                          )}
+                          {doc.processing_status === 'ready' && (
+                            <span className="flex items-center gap-1 text-[10px] text-green-500/80">
+                              <Check size={10} /> Ready
+                            </span>
+                          )}
+                          {doc.processing_status === 'failed' && (
+                            <span className="flex items-center gap-1 text-[10px] text-red-400" title={doc.processing_error}>
+                              <AlertCircle size={10} /> Failed
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                     <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity shrink-0">
+                      {doc.processing_status === 'failed' && (
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); processDocument(doc.id); }}
+                          className="p-1.5 hover:bg-surface text-text-muted hover:text-accent-primary rounded transition-all"
+                          title="Retry Processing"
+                        >
+                          <RefreshCw size={14} />
+                        </button>
+                      )}
                       <button 
                         onClick={(e) => { e.stopPropagation(); deleteDocument(doc.id); }}
                         className="p-1.5 hover:bg-red-500/10 text-text-muted hover:text-red-500 rounded transition-all"

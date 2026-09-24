@@ -28,4 +28,9 @@ class Document(Base):
         onupdate=func.now()
     )
 
+    processing_status: Mapped[str] = mapped_column(String, nullable=False, default="uploaded", server_default="uploaded")
+    extracted_text: Mapped[str] = mapped_column(String, nullable=True)
+    processing_error: Mapped[str] = mapped_column(String, nullable=True)
+    processed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+
     user: Mapped["User"] = relationship("User")
