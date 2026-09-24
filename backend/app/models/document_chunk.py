@@ -1,7 +1,7 @@
 from datetime import datetime
 from sqlalchemy import String, Integer, DateTime, ForeignKey, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from pgvector.sqlalchemy import Vector
+from pgvector.sqlalchemy import VECTOR
 from app.database.base import Base
 from typing import TYPE_CHECKING
 
@@ -20,7 +20,7 @@ class DocumentChunk(Base):
     content: Mapped[str] = mapped_column(String, nullable=False)
     
     # Dimension is 3072 for gemini-embedding-2
-    embedding = mapped_column(Vector(3072), nullable=False)
+    embedding: Mapped[list[float]] = mapped_column(VECTOR(3072), nullable=False)
     
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
