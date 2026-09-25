@@ -38,8 +38,6 @@ export default function Workspace() {
     clearActive
   } = useChatStore();
 
-  const hasSpokenGreeting = useAuthStore((state) => state.hasSpokenGreeting);
-  const setHasSpokenGreeting = useAuthStore((state) => state.setHasSpokenGreeting);
 
   useEffect(() => {
     if (!currentUser) {
@@ -70,29 +68,7 @@ export default function Workspace() {
     };
   }, [currentUser, hasSpokenGreeting, setHasSpokenGreeting]);
 
-  useEffect(() => {
-    if (!currentUser) return;
-    if (hasSpokenGreeting) return;
 
-    if (window.speechSynthesis && window.SpeechSynthesisUtterance) {
-      setHasSpokenGreeting(true);
-      const text = `Hi ${currentUser.name}, how can I help you?`;
-
-      // Cancel any stale speech before playing the new one
-      window.speechSynthesis.cancel();
-
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = "en-US";
-      utterance.rate = 1;
-      utterance.pitch = 1;
-      utterance.volume = 1;
-
-      window.speechSynthesis.speak(utterance);
-    }
-    // We intentionally do NOT place speechSynthesis.cancel() in the cleanup function here.
-    // This allows the speech to survive React 18 StrictMode's instant unmount/remount cycle.
-    // Legitimate speech cancellation during navigation is handled by the logout() action in authStore.js.
-  }, [currentUser, hasSpokenGreeting, setHasSpokenGreeting]);
 
   if (!currentUser) return null;
 
