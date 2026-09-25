@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { apiClient } from '../lib/axios';
-import { getToken } from '../utils/auth';
+import { getAccessToken } from '../utils/auth';
 
 export const useChatStore = create((set, get) => ({
   conversations: [],
@@ -98,7 +98,7 @@ export const useChatStore = create((set, get) => ({
     
     try {
       const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000";
-      const token = getToken();
+      const token = getAccessToken();
 
       const response = await fetch(`${baseUrl}/api/chat/stream`, {
         method: "POST",
