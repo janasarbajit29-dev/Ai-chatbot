@@ -12,9 +12,9 @@ export const MessageList = ({ messages, isGenerating }) => {
     <div className="w-full max-w-4xl mx-auto pb-32 pt-24 px-4 flex flex-col gap-8">
       <AnimatePresence initial={false}>
         {messages.map((msg, index) => (
-          <MessageBubble 
-            key={msg.id || index} 
-            message={msg} 
+          <MessageBubble
+            key={msg.id || index}
+            message={msg}
             isLast={index === messages.length - 1}
             onRegenerate={(id) => sendMessage(null, id)}
           />
@@ -53,13 +53,12 @@ const MessageBubble = ({ message, isLast, onRegenerate }) => {
           <span className="text-sm font-medium text-text-primary">Aura</span>
         </div>
       )}
-      
-      <div 
-        className={`relative group ${
-          isUser 
-            ? "bg-surface border border-border px-5 py-3.5 rounded-2xl rounded-tr-sm shadow-soft text-text-primary max-w-[85%]" 
+
+      <div
+        className={`relative group ${isUser
+            ? "bg-surface border border-border px-5 py-3.5 rounded-2xl rounded-tr-sm shadow-soft text-text-primary max-w-[85%]"
             : "text-text-primary leading-relaxed text-[16px] w-full pl-11"
-        }`}
+          }`}
       >
         <div className="prose prose-slate max-w-none prose-p:leading-relaxed prose-pre:p-0 prose-pre:bg-transparent">
           {isUser ? (
@@ -107,30 +106,44 @@ const MessageBubble = ({ message, isLast, onRegenerate }) => {
             </ReactMarkdown>
           )}
         </div>
-        
+
         {message.isError && !isUser && (
           <div className="mt-3 flex items-center gap-3 text-red-500 bg-red-50 px-3 py-2 rounded-lg text-sm border border-red-100">
             <span>Generation failed.</span>
-            <button 
-              onClick={() => onRegenerate(message.id)} 
+            <button
+              onClick={() => onRegenerate(message.id)}
               className="font-medium hover:underline text-red-600"
             >
               Retry
             </button>
           </div>
         )}
-        
+
+        {message.sources && message.sources.length > 0 && (
+          <div className="mt-4 pt-3 border-t border-border/50">
+            <div className="text-[11px] font-semibold text-text-muted uppercase tracking-wider mb-2">Sources</div>
+            <div className="flex flex-wrap gap-2">
+              {message.sources.map((src, i) => (
+                <div key={i} className="flex items-center gap-1.5 px-2 py-1 bg-surface-hover rounded border border-border/60 text-xs text-text-secondary">
+                  <span className="text-[10px]">📄</span>
+                  <span className="truncate max-w-[200px]">{src.filename}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {!isUser && !message.isError && (
           <div className="absolute -left-2 -bottom-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center gap-1 pl-12 pt-2">
-            <ActionButton 
-              icon={<Copy size={16} />} 
-              onClick={() => navigator.clipboard.writeText(message.content)} 
+            <ActionButton
+              icon={<Copy size={16} />}
+              onClick={() => navigator.clipboard.writeText(message.content)}
               title="Copy response"
             />
             {isLast && (
-              <ActionButton 
-                icon={<RotateCcw size={16} />} 
-                onClick={() => onRegenerate(message.id)} 
+              <ActionButton
+                icon={<RotateCcw size={16} />}
+                onClick={() => onRegenerate(message.id)}
                 title="Regenerate response"
               />
             )}
@@ -142,7 +155,7 @@ const MessageBubble = ({ message, isLast, onRegenerate }) => {
 };
 
 const ActionButton = ({ icon, onClick, title }) => (
-  <button 
+  <button
     onClick={onClick}
     title={title}
     className="p-1.5 text-text-muted hover:text-text-primary hover:bg-surface rounded-md transition-colors"

@@ -36,6 +36,16 @@ def save_document(db: Session, user_id: int, file: UploadFile) -> Document:
     valid_exts = {".pdf": "pdf", ".docx": "docx", ".txt": "txt"}
     if ext not in valid_exts or valid_exts[ext] != file_type:
         raise HTTPException(status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail="File extension does not match content type.")
+        
+    # Check for duplicate document
+    existing_doc = db.query(Document).filter(
+        Document.user_id == user_id,
+        Document.original_filename == original_filename,
+        Document.file_size == file_size
+    ).first()
+    
+    if existing_doc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="A document with this name and size already exists.")
 
     stored_filename = f"{uuid.uuid4()}{ext}"
     storage_path = os.path.join(UPLOAD_DIR, stored_filename)

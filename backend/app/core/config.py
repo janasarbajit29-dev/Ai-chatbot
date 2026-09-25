@@ -11,6 +11,10 @@ class Settings(BaseSettings):
     DOCUMENT_CHUNK_SIZE: int = 1000
     DOCUMENT_CHUNK_OVERLAP: int = 200
     EMBEDDING_MODEL: str = "gemini-embedding-2"
+    
+    # RAG Settings
+    RAG_SIMILARITY_THRESHOLD: float = 0.5
+    RAG_MAX_CONTEXT_CHARACTERS: int = 15000
 
     model_config = SettingsConfigDict(
         env_file=".env",

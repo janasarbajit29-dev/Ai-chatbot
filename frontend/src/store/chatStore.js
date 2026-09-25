@@ -159,6 +159,12 @@ export const useChatStore = create((set, get) => ({
                       )
                     }));
                   }
+                } else if (data.type === "sources") {
+                  set((state) => ({
+                    messages: state.messages.map((m) => 
+                      m.id === assistantMessageId ? { ...m, sources: data.sources } : m
+                    )
+                  }));
                 } else if (data.type === "error") {
                   throw new Error(data.content);
                 }
