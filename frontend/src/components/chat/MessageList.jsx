@@ -56,11 +56,11 @@ const MessageBubble = ({ message, isLast, onRegenerate }) => {
 
       <div
         className={`relative group ${isUser
-            ? "bg-surface border border-border px-5 py-3.5 rounded-2xl rounded-tr-sm shadow-soft text-text-primary max-w-[85%]"
-            : "text-text-primary leading-relaxed text-[16px] w-full pl-11"
+            ? "bg-[#E8E7FF] border border-[#C8C6FF] text-[#1E1C3A] px-5 py-3.5 rounded-2xl rounded-tr-sm shadow-soft max-w-[85%]"
+            : "bg-[#CEF0D8] border border-[#A3D4B3] text-[#132B1A] px-5 py-4 rounded-2xl rounded-tl-sm shadow-soft leading-relaxed text-[16px] ml-11 w-[calc(100%-2.75rem)]"
           }`}
       >
-        <div className="prose prose-slate max-w-none prose-p:leading-relaxed prose-pre:p-0 prose-pre:bg-transparent">
+        <div className="prose max-w-none prose-p:leading-relaxed prose-pre:p-0 prose-pre:bg-transparent prose-p:text-inherit prose-headings:text-inherit prose-strong:text-inherit prose-ul:text-inherit prose-ol:text-inherit prose-li:text-inherit prose-a:text-inherit text-inherit">
           {isUser ? (
             <div className="whitespace-pre-wrap">{message.content}</div>
           ) : (
@@ -134,7 +134,7 @@ const MessageBubble = ({ message, isLast, onRegenerate }) => {
         )}
 
         {!isUser && !message.isError && (
-          <div className="absolute -left-2 -bottom-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center gap-1 pl-12 pt-2">
+          <div className="absolute left-2 -bottom-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center gap-1 pt-2">
             <ActionButton
               icon={<Copy size={16} />}
               onClick={() => navigator.clipboard.writeText(message.content)}

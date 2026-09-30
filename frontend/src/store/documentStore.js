@@ -10,7 +10,7 @@ export const useDocumentStore = create((set, get) => ({
   fetchDocuments: async () => {
     set({ isLoadingDocuments: true, error: null });
     try {
-      const response = await apiClient.get('/files/');
+      const response = await apiClient.get('/api/files/');
       set({ documents: response.data, isLoadingDocuments: false });
     } catch (error) {
       set({ error: error.message, isLoadingDocuments: false });
@@ -23,7 +23,7 @@ export const useDocumentStore = create((set, get) => ({
       const formData = new FormData();
       formData.append('file', file);
       
-      const response = await apiClient.post('/files/upload', formData, {
+      const response = await apiClient.post('/api/files/upload', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -56,7 +56,7 @@ export const useDocumentStore = create((set, get) => ({
         )
       }));
 
-      const response = await apiClient.post(`/files/${id}/process`);
+      const response = await apiClient.post(`/api/files/${id}/process`);
       
       set((state) => ({
         documents: state.documents.map(doc => 
@@ -78,7 +78,7 @@ export const useDocumentStore = create((set, get) => ({
 
   deleteDocument: async (documentId) => {
     try {
-      await apiClient.delete(`/files/${documentId}`);
+      await apiClient.delete(`/api/files/${documentId}`);
       set((state) => ({
         documents: state.documents.filter(d => d.id !== documentId)
       }));

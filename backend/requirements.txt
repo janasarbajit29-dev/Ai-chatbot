@@ -1,3 +1,4 @@
+
 fastapi
 uvicorn[standard]
 sqlalchemy
@@ -7,7 +8,6 @@ pypdf
 python-docx
 pydantic-settings
 python-dotenv
-alembic
 python-jose[cryptography]
 passlib[bcrypt]
 email-validator

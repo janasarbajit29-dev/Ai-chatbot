@@ -8,6 +8,7 @@ from app.models.user import User
 from app.models.document import Document
 from app.services.document_processing_service import clean_text
 import uuid
+from unittest.mock import patch
 
 # Reusable auth headers and client
 client = TestClient(app)
@@ -98,7 +99,11 @@ def test_process_txt_success(db: Session, setup_users, auth_headers_u1):
     db.commit()
     db.refresh(doc)
     
-    response = client.post(f"/api/files/{doc.id}/process", headers=auth_headers_u1)
+    with patch(
+        "app.services.document_processing_service.generate_embeddings",
+        side_effect=lambda chunks: [[0.0] * 3072 for _ in chunks],
+    ):
+        response = client.post(f"/api/files/{doc.id}/process", headers=auth_headers_u1)
     assert response.status_code == 200
     data = response.json()
     assert data["processing_status"] == "ready"

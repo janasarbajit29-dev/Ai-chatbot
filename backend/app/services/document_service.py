@@ -4,8 +4,10 @@ import shutil
 from sqlalchemy.orm import Session
 from fastapi import UploadFile, HTTPException, status
 from app.models.document import Document
+from app.core.config import settings
 
-UPLOAD_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "storage", "uploads")
+DEFAULT_UPLOAD_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "storage", "uploads")
+UPLOAD_DIR = settings.UPLOAD_STORAGE_PATH or DEFAULT_UPLOAD_DIR
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 ALLOWED_MIME_TYPES = {

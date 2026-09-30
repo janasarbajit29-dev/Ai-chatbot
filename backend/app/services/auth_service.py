@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
+from sqlalchemy import func
 from app.models.user import User
 from app.schemas.auth import SignupRequest, LoginRequest
 from app.core.security import get_password_hash, verify_password
@@ -29,7 +30,8 @@ def verify_user_activity(db: Session, user: User) -> User:
 
 def create_user(db: Session, user_in: SignupRequest) -> User:
     # Check if email exists
-    existing_user = db.query(User).filter(User.email == user_in.email).first()
+    email_lower = user_in.email.lower()
+    existing_user = db.query(User).filter(func.lower(User.email) == email_lower).first()
     if existing_user:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -42,7 +44,7 @@ def create_user(db: Session, user_in: SignupRequest) -> User:
     # Create new user instance
     new_user = User(
         name=user_in.name,
-        email=user_in.email,
+        email=email_lower,
         password_hash=hashed_password,
         date_of_birth=user_in.date_of_birth,
     )
@@ -55,14 +57,20 @@ def create_user(db: Session, user_in: SignupRequest) -> User:
     return new_user
 
 def authenticate_user(db: Session, login_data: LoginRequest) -> User:
-    user = db.query(User).filter(User.email == login_data.email).first()
+    email_lower = login_data.email.lower()
+    print(f"DEBUG: Normalized login email: '{email_lower}'")
+    user = db.query(User).filter(func.lower(User.email) == email_lower).first()
     if not user:
+        print("DEBUG: User not found in DB")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
         )
+    print("DEBUG: User found in DB")
     
-    if not verify_password(login_data.password, user.password_hash):
+    is_valid_pwd = verify_password(login_data.password, user.password_hash)
+    print(f"DEBUG: Password verification result: {is_valid_pwd}")
+    if not is_valid_pwd:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",

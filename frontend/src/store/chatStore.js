@@ -15,7 +15,7 @@ export const useChatStore = create((set, get) => ({
   fetchConversations: async () => {
     set({ isLoadingConversations: true, error: null });
     try {
-      const response = await apiClient.get('/conversations/');
+      const response = await apiClient.get('/api/conversations/');
       set({ conversations: response.data, isLoadingConversations: false });
     } catch (error) {
       set({ error: error.message, isLoadingConversations: false });
@@ -25,7 +25,7 @@ export const useChatStore = create((set, get) => ({
   createConversation: async (title = "New Chat") => {
     set({ isGenerating: true, error: null });
     try {
-      const response = await apiClient.post('/conversations/', { title });
+      const response = await apiClient.post('/api/conversations/', { title });
       set((state) => ({ 
         conversations: [response.data, ...state.conversations],
         activeConversation: response.data,
@@ -43,7 +43,7 @@ export const useChatStore = create((set, get) => ({
     if (get().activeConversation?.id === conversation.id) return;
     set({ activeConversation: conversation, isLoadingMessages: true, messages: [], error: null });
     try {
-      const response = await apiClient.get(`/conversations/${conversation.id}/messages`);
+      const response = await apiClient.get(`/api/conversations/${conversation.id}/messages`);
       set({ messages: response.data, isLoadingMessages: false });
     } catch (error) {
       set({ error: error.message, isLoadingMessages: false });
@@ -192,7 +192,7 @@ export const useChatStore = create((set, get) => ({
 
   renameConversation: async (conversationId, newTitle) => {
     try {
-      const response = await apiClient.patch(`/conversations/${conversationId}`, { title: newTitle });
+      const response = await apiClient.patch(`/api/conversations/${conversationId}`, { title: newTitle });
       set((state) => ({
         conversations: state.conversations.map(c => c.id === conversationId ? { ...c, title: response.data.title } : c),
         activeConversation: state.activeConversation?.id === conversationId ? { ...state.activeConversation, title: response.data.title } : state.activeConversation
@@ -205,7 +205,7 @@ export const useChatStore = create((set, get) => ({
 
   deleteConversation: async (conversationId) => {
     try {
-      await apiClient.delete(`/conversations/${conversationId}`);
+      await apiClient.delete(`/api/conversations/${conversationId}`);
       set((state) => {
         const filtered = state.conversations.filter(c => c.id !== conversationId);
         const isActiveDeleted = state.activeConversation?.id === conversationId;

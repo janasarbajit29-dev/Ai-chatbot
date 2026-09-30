@@ -1,5 +1,7 @@
 import pytest
 import os
+from types import SimpleNamespace
+from unittest.mock import patch
 from sqlalchemy import text
 from app.database.connection import get_db
 from app.models.document import Document
@@ -76,10 +78,17 @@ def test_empty_text_chunking():
     assert len(chunk_text("")) == 0
     assert len(chunk_text("   ")) == 0
 
-def test_embeddings_generation_real():
-    # Calling real Gemini API
+def test_embeddings_generation_uses_api_response_shape():
     chunks = ["Hello world", "This is a test of embeddings"]
-    embeddings = generate_embeddings(chunks)
+    fake_client = SimpleNamespace(
+        models=SimpleNamespace(
+            embed_content=lambda **kwargs: SimpleNamespace(
+                embeddings=[SimpleNamespace(values=[0.0] * 3072)]
+            )
+        )
+    )
+    with patch("app.services.embedding_service.get_genai_client", return_value=fake_client):
+        embeddings = generate_embeddings(chunks)
     
     assert len(embeddings) == 2
     assert len(embeddings[0]) == 3072
@@ -108,7 +117,9 @@ def test_document_processing_pipeline(db_session, test_user):
     db_session.refresh(doc)
     
     # 2. Process document
-    processed_doc = document_processing_service.process_document(db_session, doc.id, test_user.id)
+    embedding_mock = lambda chunks: [[0.0] * 3072 for _ in chunks]
+    with patch.object(document_processing_service, "generate_embeddings", side_effect=embedding_mock):
+        processed_doc = document_processing_service.process_document(db_session, doc.id, test_user.id)
     
     assert processed_doc.processing_status == "ready"
     assert processed_doc.extracted_text is not None
@@ -132,7 +143,8 @@ def test_document_processing_pipeline(db_session, test_user):
         assert c.user_id == test_user.id
         
     # 5. Reprocessing does not duplicate
-    document_processing_service.process_document(db_session, doc.id, test_user.id)
+    with patch.object(document_processing_service, "generate_embeddings", side_effect=embedding_mock):
+        document_processing_service.process_document(db_session, doc.id, test_user.id)
     chunks_after = db_session.query(DocumentChunk).filter(DocumentChunk.document_id == doc.id).all()
     assert len(chunks_after) == len(chunks) # Should remain the same count
     

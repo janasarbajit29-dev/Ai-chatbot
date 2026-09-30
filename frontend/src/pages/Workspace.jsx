@@ -8,7 +8,7 @@ import { SmartPromptChips } from "../components/chat/SmartPromptChips";
 import { MessageList } from "../components/chat/MessageList";
 import { useAuthStore } from "../store/authStore";
 import { useNavigate } from "react-router-dom";
-import { getGreetingText } from "../utils/greeting";
+import { getGreetingText, getFirstName } from "../utils/greeting";
 import { speak } from "../utils/speech";
 
 import { useChatStore } from "../store/chatStore";
@@ -17,22 +17,22 @@ import { Sidebar } from "../components/chat/Sidebar";
 export default function Workspace() {
   const [showSidebar, setShowSidebar] = useState(false);
   const scrollRef = useRef(null);
-  
+
   const currentUser = useAuthStore((state) => state.currentUser);
   const hasSpokenGreeting = useAuthStore((state) => state.hasSpokenGreeting);
   const setHasSpokenGreeting = useAuthStore((state) => state.setHasSpokenGreeting);
   const navigate = useNavigate();
   const hasSpokenLocal = useRef(false);
 
-  const { 
-    conversations, 
-    activeConversation, 
-    messages, 
-    isGenerating, 
-    fetchConversations, 
-    createConversation, 
-    selectConversation, 
-    sendMessage, 
+  const {
+    conversations,
+    activeConversation,
+    messages,
+    isGenerating,
+    fetchConversations,
+    createConversation,
+    selectConversation,
+    sendMessage,
     deleteConversation,
     stopGenerating,
     clearActive
@@ -68,6 +68,23 @@ export default function Workspace() {
     };
   }, [currentUser, hasSpokenGreeting, setHasSpokenGreeting]);
 
+  useEffect(() => {
+    if (!currentUser) return;
+    if (hasSpokenGreeting) return;
+
+    if (window.speechSynthesis && window.SpeechSynthesisUtterance) {
+      setHasSpokenGreeting(true);
+      const firstName = getFirstName(currentUser.name);
+      const text = `Hi ${firstName}, how can I help you?`;
+
+      // Cancel any stale speech before playing the new one
+      window.speechSynthesis.cancel();
+
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = "en-US";
+      utterance.rate = 1;
+      utterance.pitch = 1;
+      utterance.volume = 1;
 
 
   if (!currentUser) return null;
@@ -86,7 +103,7 @@ export default function Workspace() {
     if (scrollRef.current) {
       const { scrollHeight, clientHeight, scrollTop } = scrollRef.current;
       const isNearBottom = scrollHeight - clientHeight - scrollTop < 150;
-      
+
       if (isNearBottom || !isGenerating) {
         scrollRef.current.scrollTo({
           top: scrollRef.current.scrollHeight,
@@ -100,7 +117,7 @@ export default function Workspace() {
 
   return (
     <div className="relative h-screen bg-canvas flex overflow-hidden">
-      <Sidebar 
+      <Sidebar
         isOpen={showSidebar}
         onClose={() => setShowSidebar(false)}
         conversations={conversations}
@@ -115,77 +132,65 @@ export default function Workspace() {
 
         {/* Main Content Area */}
         <main className="flex-1 flex flex-col relative w-full h-full overflow-hidden">
-        <AnimatedBackground />
-        
-        {/* Empty State / Hero */}
-        <AnimatePresence>
-          {!isChatActive && (
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0, scale: 0.95, filter: "blur(10px)", y: -40 }}
-              transition={{ duration: 0.6, ease: [0.32, 0.72, 0, 1] }}
-              className="absolute inset-0 flex flex-col items-center justify-center px-4 z-0 pointer-events-none pb-[25vh]"
-            >
-              <motion.div layoutId="hero-orb" className="mb-10">
-                <AIAvatar size="large" state="idle" />
-              </motion.div>
-              
-              <motion.div layoutId="hero-text" className="text-center mb-16">
-                <h1 className="text-[2.25rem] leading-[1.2] md:text-5xl font-medium text-text-primary mb-4 tracking-tight">
-                  {getGreeting()}
-                </h1>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+          <AnimatedBackground />
 
-        {/* Chat Interface */}
-        <AnimatePresence>
-          {isChatActive && (
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.3, duration: 0.5 }}
-              className="flex-1 overflow-y-auto w-full relative z-10 scroll-smooth hide-scrollbar pb-32 pt-20"
-              ref={scrollRef}
-            >
-              <MessageList messages={messages} isGenerating={isGenerating} />
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Composer Area */}
-        <motion.div 
-          layout
-          initial={false}
-          animate={{
-            bottom: isChatActive ? "32px" : "12%",
-          }}
-          transition={{ duration: 0.7, ease: [0.32, 0.72, 0, 1] }}
-          className="absolute inset-x-0 px-4 z-20 flex flex-col items-center pointer-events-auto"
-        >
-          <div className="w-full max-w-3xl flex flex-col items-center gap-6">
-            <MainComposer 
-              onSend={handleSend} 
-              isGenerating={isGenerating} 
-              onStop={handleStop}
-            />
-            
-            <AnimatePresence>
-              {!isChatActive && (
-                <motion.div
-                  initial={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0, marginTop: 0 }}
-                  transition={{ duration: 0.4 }}
-                  className="overflow-hidden w-full"
-                >
-                  <SmartPromptChips onSelect={handleSend} />
+          {/* Empty State / Hero */}
+          <AnimatePresence>
+            {!isChatActive && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0, scale: 0.95, filter: "blur(10px)", y: -40 }}
+                transition={{ duration: 0.6, ease: [0.32, 0.72, 0, 1] }}
+                className="absolute inset-0 flex flex-col items-center justify-center px-4 z-0 pointer-events-none pb-[25vh]"
+              >
+                <motion.div layoutId="hero-orb" className="mb-10">
+                  <AIAvatar size="large" state="idle" />
                 </motion.div>
+
+                <motion.div layoutId="hero-text" className="text-center mb-16">
+                  <h1 className="text-[2.25rem] leading-[1.2] md:text-5xl font-medium text-text-primary mb-4 tracking-tight">
+                    {getGreeting()}
+                  </h1>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Chat Interface */}
+          <AnimatePresence>
+            {isChatActive && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.3, duration: 0.5 }}
+                className="flex-1 overflow-y-auto w-full relative z-10 scroll-smooth hide-scrollbar pb-32 pt-20"
+                ref={scrollRef}
+              >
+                <MessageList messages={messages} isGenerating={isGenerating} />
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Composer Area */}
+          <div
+            className="absolute inset-x-0 px-4 z-20 flex flex-col items-center pointer-events-auto"
+            style={{ bottom: isChatActive ? "32px" : "12%" }}
+          >
+            <div className="w-full max-w-3xl flex flex-col items-center gap-6">
+              <MainComposer
+                onSend={handleSend}
+                isGenerating={isGenerating}
+                onStop={handleStop}
+              />
+
+              {!isChatActive && (
+                <div className="overflow-hidden w-full">
+                  <SmartPromptChips onSelect={handleSend} />
+                </div>
               )}
-            </AnimatePresence>
+            </div>
           </div>
-        </motion.div>
         </main>
       </div>
     </div>
