@@ -16,3 +16,5 @@ pytest
 httpx
 google-genai==2.24.0
 pgvector
+
+psycopg[binary]>=3.2,<4

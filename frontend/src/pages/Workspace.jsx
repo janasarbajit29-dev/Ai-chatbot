@@ -8,9 +8,8 @@ import { SmartPromptChips } from "../components/chat/SmartPromptChips";
 import { MessageList } from "../components/chat/MessageList";
 import { useAuthStore } from "../store/authStore";
 import { useNavigate } from "react-router-dom";
-import { getGreetingText, getFirstName } from "../utils/greeting";
+import { getGreetingText } from "../utils/greeting";
 import { speak } from "../utils/speech";
-
 import { useChatStore } from "../store/chatStore";
 import { Sidebar } from "../components/chat/Sidebar";
 
@@ -20,7 +19,10 @@ export default function Workspace() {
 
   const currentUser = useAuthStore((state) => state.currentUser);
   const hasSpokenGreeting = useAuthStore((state) => state.hasSpokenGreeting);
-  const setHasSpokenGreeting = useAuthStore((state) => state.setHasSpokenGreeting);
+  const setHasSpokenGreeting = useAuthStore(
+    (state) => state.setHasSpokenGreeting
+  );
+
   const navigate = useNavigate();
   const hasSpokenLocal = useRef(false);
 
@@ -30,14 +32,12 @@ export default function Workspace() {
     messages,
     isGenerating,
     fetchConversations,
-    createConversation,
     selectConversation,
     sendMessage,
     deleteConversation,
     stopGenerating,
-    clearActive
+    clearActive,
   } = useChatStore();
-
 
   useEffect(() => {
     if (!currentUser) {
@@ -55,8 +55,10 @@ export default function Workspace() {
     }
 
     let isMounted = true;
+
     const timer = setTimeout(() => {
       if (!isMounted) return;
+
       hasSpokenLocal.current = true;
       setHasSpokenGreeting(true);
       speak(getGreetingText(currentUser.name));
@@ -67,25 +69,6 @@ export default function Workspace() {
       clearTimeout(timer);
     };
   }, [currentUser, hasSpokenGreeting, setHasSpokenGreeting]);
-
-  useEffect(() => {
-    if (!currentUser) return;
-    if (hasSpokenGreeting) return;
-
-    if (window.speechSynthesis && window.SpeechSynthesisUtterance) {
-      setHasSpokenGreeting(true);
-      const firstName = getFirstName(currentUser.name);
-      const text = `Hi ${firstName}, how can I help you?`;
-
-      // Cancel any stale speech before playing the new one
-      window.speechSynthesis.cancel();
-
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = "en-US";
-      utterance.rate = 1;
-      utterance.pitch = 1;
-      utterance.volume = 1;
-
 
   if (!currentUser) return null;
 
@@ -107,7 +90,7 @@ export default function Workspace() {
       if (isNearBottom || !isGenerating) {
         scrollRef.current.scrollTo({
           top: scrollRef.current.scrollHeight,
-          behavior: isGenerating ? "auto" : "smooth"
+          behavior: isGenerating ? "auto" : "smooth",
         });
       }
     }
@@ -128,7 +111,10 @@ export default function Workspace() {
       />
 
       <div className="flex-1 flex flex-col relative min-w-0 h-full overflow-hidden">
-        <Header onToggleSidebar={() => setShowSidebar(!showSidebar)} isOpen={showSidebar} />
+        <Header
+          onToggleSidebar={() => setShowSidebar(!showSidebar)}
+          isOpen={showSidebar}
+        />
 
         {/* Main Content Area */}
         <main className="flex-1 flex flex-col relative w-full h-full overflow-hidden">
@@ -140,7 +126,12 @@ export default function Workspace() {
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                exit={{ opacity: 0, scale: 0.95, filter: "blur(10px)", y: -40 }}
+                exit={{
+                  opacity: 0,
+                  scale: 0.95,
+                  filter: "blur(10px)",
+                  y: -40,
+                }}
                 transition={{ duration: 0.6, ease: [0.32, 0.72, 0, 1] }}
                 className="absolute inset-0 flex flex-col items-center justify-center px-4 z-0 pointer-events-none pb-[25vh]"
               >
@@ -148,7 +139,10 @@ export default function Workspace() {
                   <AIAvatar size="large" state="idle" />
                 </motion.div>
 
-                <motion.div layoutId="hero-text" className="text-center mb-16">
+                <motion.div
+                  layoutId="hero-text"
+                  className="text-center mb-16"
+                >
                   <h1 className="text-[2.25rem] leading-[1.2] md:text-5xl font-medium text-text-primary mb-4 tracking-tight">
                     {getGreeting()}
                   </h1>
@@ -167,7 +161,10 @@ export default function Workspace() {
                 className="flex-1 overflow-y-auto w-full relative z-10 scroll-smooth hide-scrollbar pb-32 pt-20"
                 ref={scrollRef}
               >
-                <MessageList messages={messages} isGenerating={isGenerating} />
+                <MessageList
+                  messages={messages}
+                  isGenerating={isGenerating}
+                />
               </motion.div>
             )}
           </AnimatePresence>
