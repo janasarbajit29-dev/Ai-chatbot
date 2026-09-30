@@ -3,7 +3,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes import health
 from app.core.config import settings
 
-app = FastAPI(title="AURA Backend", version="1.0.0")
+app = FastAPI(
+    title="AURA Backend",
+    version="1.0.0",
+    docs_url="/api/docs",
+    openapi_url="/api/openapi.json",
+    redoc_url="/api/redoc"
+)
 
 origins = [
     "http://localhost:5173",
