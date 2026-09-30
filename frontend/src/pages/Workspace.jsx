@@ -86,12 +86,6 @@ export default function Workspace() {
       utterance.pitch = 1;
       utterance.volume = 1;
 
-      window.speechSynthesis.speak(utterance);
-    }
-    // We intentionally do NOT place speechSynthesis.cancel() in the cleanup function here.
-    // This allows the speech to survive React 18 StrictMode's instant unmount/remount cycle.
-    // Legitimate speech cancellation during navigation is handled by the logout() action in authStore.js.
-  }, [currentUser, hasSpokenGreeting, setHasSpokenGreeting]);
 
   if (!currentUser) return null;
 
