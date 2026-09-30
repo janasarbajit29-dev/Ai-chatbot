@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { AnimatedBackground } from "../components/core/AnimatedBackground";
-import { AIAvatar } from "../components/core/AIAvatar";
+import loginBg from "../assets/login_background.jpg";
+import loginRobot from "../assets/login_robot.jpg";
 import { useAuthStore } from "../store/authStore";
 import { apiClient } from "../lib/axios";
 
@@ -49,6 +49,8 @@ export default function Auth() {
     setIsLoginLoading(true);
     
     try {
+      console.log(`DEBUG FRONTEND: sending email after trim: '${loginEmail.trim()}'`);
+      console.log(`DEBUG FRONTEND: password field is empty: ${loginPassword === ""}`);
       const response = await apiClient.post("/api/auth/login", {
         email: loginEmail.trim(),
         password: loginPassword,
@@ -130,11 +132,11 @@ export default function Auth() {
 
   return (
     <div className="relative h-screen bg-canvas flex flex-col items-center justify-center overflow-hidden">
-      <AnimatedBackground />
+      <img src={loginBg} alt="Background" className="absolute inset-0 w-full h-full object-cover opacity-90 pointer-events-none" />
 
       <div className="z-10 w-full max-w-md px-4">
         <div className="flex justify-center mb-8">
-          <AIAvatar size="medium" state="idle" />
+          <img src={loginRobot} alt="AURA Assistant" className="w-40 h-40 object-cover rounded-full shadow-lg" />
         </div>
 
         <div className="relative w-full overflow-hidden rounded-3xl">
@@ -183,7 +185,7 @@ export default function Auth() {
                     disabled={isLoginLoading}
                     className={`w-full mt-4 py-3 rounded-xl ${isLoginLoading ? "bg-accent-primary/50 cursor-not-allowed" : "bg-accent-primary hover:bg-accent-secondary"} text-white font-medium transition-colors shadow-soft hover:shadow-float flex justify-center items-center gap-2`}
                   >
-                    {isLoginLoading ? "Accessing..." : "Access Workspace"}
+                    {isLoginLoading ? "Accessing..." : "Login"}
                   </button>
                 </form>
 

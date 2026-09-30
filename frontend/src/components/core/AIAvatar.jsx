@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import robotImg from "../../assets/roboat.png";
+import robotImg from "../../assets/robot(1).png.png";
 
 export const AIAvatar = ({ state = "idle", size = "large" }) => {
   const sizeClasses = {
@@ -26,16 +26,16 @@ export const AIAvatar = ({ state = "idle", size = "large" }) => {
         transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
         className="absolute inset-4 rounded-full bg-gradient-to-br from-accent-primary/30 to-accent-secondary/30 blur-2xl"
       />
-      
+
       {/* Robot Image Container */}
       <motion.div
         animate={floatAnimation}
         className="relative w-full h-full flex items-center justify-center"
       >
-        <img 
-          src={robotImg} 
-          alt="AI Robot" 
-          className="w-full h-full object-contain drop-shadow-2xl mix-blend-multiply"
+        <img
+          src={robotImg}
+          alt="AI Robot"
+          className="w-full h-full object-contain drop-shadow-2xl mix-blend-multiply scale-[1.5]"
         />
       </motion.div>
     </div>

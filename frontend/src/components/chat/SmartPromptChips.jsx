@@ -1,4 +1,3 @@
-import { motion } from "framer-motion";
 import { FileText, Code, PenTool, LayoutTemplate, BrainCircuit, Globe } from "lucide-react";
 
 const suggestions = [
@@ -12,27 +11,17 @@ const suggestions = [
 
 export const SmartPromptChips = ({ onSelect }) => {
   return (
-    <motion.div 
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.2, duration: 0.5 }}
-      className="flex flex-wrap items-center justify-center gap-3 max-w-3xl mx-auto mt-6"
-    >
-      {suggestions.map((suggestion, idx) => (
-        <motion.button
+    <div className="flex flex-wrap items-center justify-center gap-3 max-w-3xl mx-auto mt-6">
+      {suggestions.map((suggestion) => (
+        <button
           key={suggestion.id}
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 + (idx * 0.05), duration: 0.4 }}
-          whileHover={{ y: -2, backgroundColor: "#FFFFFF" }}
-          whileTap={{ scale: 0.97 }}
           onClick={() => onSelect(suggestion.label)}
-          className="flex items-center gap-2 px-4 py-2 bg-surface-soft border border-border rounded-full text-sm font-medium text-text-secondary hover:text-text-primary hover:border-border/80 hover:shadow-sm transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-surface-soft border border-border rounded-full text-sm font-medium text-text-secondary hover:text-text-primary hover:border-border/80 hover:shadow-sm hover:-translate-y-0.5 active:scale-97 transition-all"
         >
           <suggestion.icon size={14} className="text-text-muted" />
           {suggestion.label}
-        </motion.button>
+        </button>
       ))}
-    </motion.div>
+    </div>
   );
 };

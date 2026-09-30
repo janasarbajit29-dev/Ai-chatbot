@@ -1,5 +1,10 @@
+from pathlib import Path
+
 from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+BASE_DIR = Path(__file__).resolve().parents[2]
+
 
 class Settings(BaseSettings):
     DATABASE_URL: str
@@ -11,15 +16,18 @@ class Settings(BaseSettings):
     DOCUMENT_CHUNK_SIZE: int = 1000
     DOCUMENT_CHUNK_OVERLAP: int = 200
     EMBEDDING_MODEL: str = "gemini-embedding-2"
-    
+    FRONTEND_URL: str | None = None
+    UPLOAD_STORAGE_PATH: str | None = None
+
     # RAG Settings
     RAG_SIMILARITY_THRESHOLD: float = 0.5
     RAG_MAX_CONTEXT_CHARACTERS: int = 15000
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=str(BASE_DIR / ".env"),
         env_file_encoding="utf-8",
-        extra="ignore"
+        extra="ignore",
     )
+
 
 settings = Settings()

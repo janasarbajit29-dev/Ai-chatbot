@@ -1,12 +1,18 @@
 import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Plus, Mic, Sparkles } from "lucide-react";
+import { Plus, Mic, Sparkles, Loader2 } from "lucide-react";
 import { SendButton } from "./SendButton";
+import { useDocumentStore } from "../../store/documentStore";
 
 export const MainComposer = ({ onSend, isGenerating, onStop }) => {
   const [isFocused, setIsFocused] = useState(false);
   const [inputValue, setInputValue] = useState("");
   const textareaRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const recognitionRef = useRef(null);
+  
+  const [isRecording, setIsRecording] = useState(false);
+  const { uploadDocument, isUploading } = useDocumentStore();
 
   // Auto-resize textarea
   useEffect(() => {
@@ -23,6 +29,74 @@ export const MainComposer = ({ onSend, isGenerating, onStop }) => {
     }
   };
 
+  useEffect(() => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      const recognition = new SpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      
+      recognition.onstart = () => setIsRecording(true);
+      
+      recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        setInputValue(transcript);
+        
+        // Brief timeout to show the text in the input before sending
+        setTimeout(() => {
+          onSend(transcript);
+          setInputValue("");
+        }, 300);
+      };
+      
+      recognition.onerror = (event) => {
+        console.error("Speech recognition error", event.error);
+        setIsRecording(false);
+        if (event.error === 'not-allowed') {
+          alert("Microphone access was denied. Please allow microphone permissions.");
+        } else {
+          alert(`Microphone error: ${event.error}`);
+        }
+      };
+      
+      recognition.onend = () => setIsRecording(false);
+      
+      recognitionRef.current = recognition;
+    }
+  }, [onSend]);
+
+  const handleMicClick = () => {
+    if (!recognitionRef.current) {
+      alert("Your browser does not support speech recognition.");
+      return;
+    }
+    
+    if (isRecording) {
+      recognitionRef.current.stop();
+    } else {
+      try {
+        recognitionRef.current.start();
+      } catch (err) {
+        console.error(err);
+      }
+    }
+  };
+
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      await uploadDocument(file);
+    } catch (err) {
+      alert(err.message || "Failed to upload document");
+    }
+    e.target.value = '';
+  };
+
   return (
     <motion.div
       animate={{
@@ -36,8 +110,20 @@ export const MainComposer = ({ onSend, isGenerating, onStop }) => {
       className="relative w-full max-w-3xl mx-auto bg-surface rounded-[24px] border p-2 flex items-end gap-2 shadow-composer transition-colors"
     >
       <div className="flex flex-col justify-end pb-1 pl-1">
-        <button className="p-2.5 text-text-muted hover:text-text-primary hover:bg-surface-soft rounded-full transition-all active:scale-95">
-          <Plus size={22} strokeWidth={2} />
+        <input 
+          type="file" 
+          ref={fileInputRef} 
+          onChange={handleFileChange} 
+          className="hidden" 
+          accept=".pdf,.docx,.txt"
+        />
+        <button 
+          onClick={handleUploadClick}
+          disabled={isUploading || isGenerating}
+          className="p-2.5 text-text-muted hover:text-text-primary hover:bg-surface-soft rounded-full transition-all active:scale-95 disabled:opacity-50"
+          title="Upload Document"
+        >
+          {isUploading ? <Loader2 size={22} strokeWidth={2} className="animate-spin text-accent-primary" /> : <Plus size={22} strokeWidth={2} />}
         </button>
       </div>
 
@@ -63,7 +149,16 @@ export const MainComposer = ({ onSend, isGenerating, onStop }) => {
         <button className="p-2 text-text-muted hover:text-accent-primary hover:bg-accent-soft rounded-full transition-all active:scale-95 group">
           <Sparkles size={20} className="group-hover:rotate-12 transition-transform duration-300" />
         </button>
-        <button className="p-2 text-text-muted hover:text-text-primary hover:bg-surface-soft rounded-full transition-all active:scale-95">
+        <button 
+          onClick={handleMicClick}
+          disabled={isGenerating}
+          className={`p-2 rounded-full transition-all active:scale-95 ${
+            isRecording 
+              ? "text-red-500 bg-red-500/10 hover:bg-red-500/20 animate-pulse" 
+              : "text-text-muted hover:text-text-primary hover:bg-surface-soft"
+          }`}
+          title="Voice input"
+        >
           <Mic size={20} />
         </button>
         <SendButton 

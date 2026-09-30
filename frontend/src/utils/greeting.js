@@ -38,8 +38,14 @@ export function getGreetingMeta(date = new Date()) {
   return { label: "night", text: "Good night" };
 }
 
+export function getFirstName(fullName) {
+  if (!fullName || typeof fullName !== 'string') return "User";
+  const parts = fullName.trim().split(/\s+/);
+  return parts[0] || "User";
+}
+
 export function getGreetingText(userName, date = new Date()) {
-  const cleanedName = (userName || "User").trim();
+  const firstName = getFirstName(userName);
   const { text } = getGreetingMeta(date);
-  return `${text}, ${cleanedName}. How can I help you?`;
+  return `${text}, ${firstName}. How can I help you?`;
 }
