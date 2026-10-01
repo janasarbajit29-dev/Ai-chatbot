@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.responses import Response
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes import health
 from app.core.config import settings
@@ -35,6 +36,12 @@ app.include_router(messages.router, prefix="/api/conversations/{conversation_id}
 app.include_router(chat.router, prefix="/api/chat")
 app.include_router(files.router, prefix="/api/files")
 app.include_router(rag.router)
-@app.get("/")
+
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    return Response(status_code=204)
+
+
+@app.api_route("/", methods=["GET", "HEAD"])
 async def root():
     return {"message": "AURA Backend is running"}
