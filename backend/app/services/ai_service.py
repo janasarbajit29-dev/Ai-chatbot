@@ -51,10 +51,11 @@ class GeminiAIService:
                     )
                 )
 
-            response_stream = self.client.models.generate_content_stream(
+            chat = self.client.chats.create(
                 model=self.model,
-                contents=contents
+                history=contents[:-1]
             )
+            response_stream = chat.send_message_stream(contents[-1].parts)
             for chunk in response_stream:
                 if chunk.text:
                     yield chunk.text
