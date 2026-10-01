@@ -7,6 +7,9 @@ import { useChatStore } from "../../store/chatStore";
 
 export const MessageList = ({ messages, isGenerating }) => {
   const sendMessage = useChatStore((state) => state.sendMessage);
+  const isThinking = isGenerating && messages.some(
+    (message) => message.role === "assistant" && message.isStreaming && !message.content
+  );
 
   return (
     <div className="w-full max-w-4xl mx-auto pb-32 pt-24 px-4 flex flex-col gap-8">
@@ -19,7 +22,7 @@ export const MessageList = ({ messages, isGenerating }) => {
             onRegenerate={(id) => sendMessage(null, id)}
           />
         ))}
-        {isGenerating && (
+        {isThinking && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
