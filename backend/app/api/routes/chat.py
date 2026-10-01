@@ -27,5 +27,10 @@ def stream_chat(
 ):
     return StreamingResponse(
         chat_service.process_streaming_chat_message(db, current_user.id, schema),
-        media_type="text/event-stream"
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache, no-transform",
+            "X-Accel-Buffering": "no",
+            "Connection": "keep-alive",
+        },
     )

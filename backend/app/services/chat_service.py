@@ -71,6 +71,10 @@ def process_streaming_chat_message(db: Session, user_id: int, schema: ChatReques
 
     history = message_service.get_conversation_messages(db, user_id, schema.conversation_id)
 
+    # Send a first event before retrieval, which can take long enough to make
+    # the client or an intermediary appear to have stalled.
+    yield f"data: {json.dumps({'type': 'start', 'user_message_id': user_message.id})}\n\n"
+
     # RAG Integration
     sources = []
     try:
@@ -105,9 +109,6 @@ def process_streaming_chat_message(db: Session, user_id: int, schema: ChatReques
                 history[-1] = Message(role="user", content=rag_prompt)
     except Exception:
         pass
-
-    # Optionally we can yield an initial event with user_message details
-    yield f"data: {json.dumps({'type': 'start', 'user_message_id': user_message.id})}\n\n"
 
     assistant_content = ""
     try:
