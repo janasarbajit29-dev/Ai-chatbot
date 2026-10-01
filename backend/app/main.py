@@ -2,7 +2,6 @@ from fastapi import FastAPI
 from fastapi.responses import Response
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes import health
-from app.core.config import settings
 
 app = FastAPI(
     title="AURA Backend",
@@ -12,18 +11,11 @@ app = FastAPI(
     redoc_url="/api/redoc"
 )
 
-origins = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-]
-if settings.FRONTEND_URL:
-    origins.append(settings.FRONTEND_URL.rstrip("/"))
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_methods=["*"],
     allow_headers=["*"],
 )
 
