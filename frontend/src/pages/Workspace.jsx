@@ -99,7 +99,7 @@ export default function Workspace() {
   const isChatActive = activeConversation !== null || messages.length > 0;
 
   return (
-    <div className="relative h-screen bg-canvas flex overflow-hidden">
+    <div className="relative h-[100dvh] bg-canvas flex overflow-hidden sm:h-screen">
       <Sidebar
         isOpen={showSidebar}
         onClose={() => setShowSidebar(false)}
@@ -133,17 +133,20 @@ export default function Workspace() {
                   y: -40,
                 }}
                 transition={{ duration: 0.6, ease: [0.32, 0.72, 0, 1] }}
-                className="absolute inset-0 flex flex-col items-center justify-center px-4 z-0 pointer-events-none pb-[25vh]"
+                className="absolute inset-0 flex flex-col items-center justify-center px-4 z-0 pointer-events-none max-[600px]:pb-[22vh] pb-[15vh] [@media(max-height:600px)]:max-[600px]:pb-[44vh] sm:pb-[25vh]"
               >
-                <motion.div layoutId="hero-orb" className="mb-10">
+                <motion.div
+                  layoutId="hero-orb"
+                  className="mb-3 [&>div]:!h-52 [&>div]:!w-52 max-[600px]:mb-0 max-[600px]:[&>div]:!h-52 max-[600px]:[&>div]:!w-52 max-[600px]:[&_img]:!scale-[1.8] [@media(max-height:600px)]:max-[600px]:mb-0 [@media(max-height:600px)]:max-[600px]:translate-y-[74px] sm:mb-10 sm:[&>div]:!h-72 sm:[&>div]:!w-72"
+                >
                   <AIAvatar size="large" state="idle" />
                 </motion.div>
 
                 <motion.div
                   layoutId="hero-text"
-                  className="text-center mb-16"
+                  className="text-center mb-4 sm:mb-16"
                 >
-                  <h1 className="text-[2.25rem] leading-[1.2] md:text-5xl font-medium text-text-primary mb-4 tracking-tight">
+                  <h1 className="text-xl leading-tight sm:text-[2.25rem] sm:leading-[1.2] md:text-5xl font-medium text-text-primary mb-2 sm:mb-4 tracking-tight">
                     {getGreeting()}
                   </h1>
                 </motion.div>
@@ -171,10 +174,10 @@ export default function Workspace() {
 
           {/* Composer Area */}
           <div
-            className="absolute inset-x-0 px-4 z-20 flex flex-col items-center pointer-events-auto"
-            style={{ bottom: isChatActive ? "32px" : "12%" }}
+            className="absolute inset-x-0 bottom-[2%] px-4 z-20 flex flex-col items-center pointer-events-auto max-[600px]:bottom-[15vh] [@media(min-height:900px)]:max-[600px]:bottom-[18vh] [@media(max-height:600px)]:max-[600px]:bottom-[5.5%] sm:bottom-[12%]"
+            style={isChatActive ? { bottom: "32px" } : undefined}
           >
-            <div className="w-full max-w-3xl flex flex-col items-center gap-6">
+            <div className="w-full max-w-3xl flex flex-col items-center gap-3 sm:gap-6">
               <MainComposer
                 onSend={handleSend}
                 isGenerating={isGenerating}
@@ -182,7 +185,7 @@ export default function Workspace() {
               />
 
               {!isChatActive && (
-                <div className="overflow-hidden w-full">
+                <div className="overflow-hidden w-full max-[600px]:translate-y-10">
                   <SmartPromptChips onSelect={handleSend} />
                 </div>
               )}

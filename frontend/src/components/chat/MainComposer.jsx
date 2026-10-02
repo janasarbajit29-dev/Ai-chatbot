@@ -7,6 +7,9 @@ import { useDocumentStore } from "../../store/documentStore";
 export const MainComposer = ({ onSend, isGenerating, onStop }) => {
   const [isFocused, setIsFocused] = useState(false);
   const [inputValue, setInputValue] = useState("");
+  const [isSmallScreen, setIsSmallScreen] = useState(() =>
+    window.matchMedia("(max-width: 639px)").matches
+  );
   const textareaRef = useRef(null);
   const fileInputRef = useRef(null);
   const recognitionRef = useRef(null);
@@ -21,6 +24,13 @@ export const MainComposer = ({ onSend, isGenerating, onStop }) => {
       textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 200)}px`;
     }
   }, [inputValue]);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(max-width: 639px)");
+    const updateScreenSize = (event) => setIsSmallScreen(event.matches);
+    mediaQuery.addEventListener("change", updateScreenSize);
+    return () => mediaQuery.removeEventListener("change", updateScreenSize);
+  }, []);
 
   const handleSend = () => {
     if (inputValue.trim()) {
@@ -107,9 +117,9 @@ export const MainComposer = ({ onSend, isGenerating, onStop }) => {
         borderColor: isFocused ? "#E0DDFF" : "#E6EAF0"
       }}
       transition={{ duration: 0.3, ease: "easeOut" }}
-      className="relative w-full max-w-3xl mx-auto bg-surface rounded-[24px] border p-2 flex items-end gap-2 shadow-composer transition-colors"
+      className="relative w-full max-w-3xl mx-auto bg-surface rounded-[24px] border p-2 flex items-center gap-1 shadow-composer transition-colors sm:items-end sm:gap-2"
     >
-      <div className="flex flex-col justify-end pb-1 pl-1">
+      <div className="flex flex-col justify-end pb-0 pl-1 sm:pb-1">
         <input 
           type="file" 
           ref={fileInputRef} 
@@ -140,12 +150,12 @@ export const MainComposer = ({ onSend, isGenerating, onStop }) => {
           }
         }}
         disabled={isGenerating}
-        placeholder="Ask anything, upload a file, or start a thought..."
-        className={`w-full bg-transparent resize-none outline-none text-text-primary placeholder:text-text-muted py-3.5 px-2 min-h-[52px] max-h-[200px] text-[16px] leading-relaxed hide-scrollbar ${isGenerating ? 'opacity-50 cursor-not-allowed' : ''}`}
+        placeholder={isSmallScreen ? "Ask anything" : "Ask anything, upload a file, or start a thought..."}
+        className={`w-full min-w-0 flex-1 sm:flex-initial whitespace-nowrap bg-transparent resize-none outline-none text-text-primary placeholder:text-text-muted py-3.5 px-0 sm:px-2 min-h-[52px] max-h-[200px] text-sm sm:text-[16px] leading-relaxed hide-scrollbar ${isGenerating ? 'opacity-50 cursor-not-allowed' : ''}`}
         rows={1}
       />
 
-      <div className="flex items-center gap-1 pb-1 pr-1">
+      <div className="flex items-center gap-1 pb-0 pr-1 sm:pb-1">
         <button className="p-2 text-text-muted hover:text-accent-primary hover:bg-accent-soft rounded-full transition-all active:scale-95 group">
           <Sparkles size={20} className="group-hover:rotate-12 transition-transform duration-300" />
         </button>
@@ -165,6 +175,7 @@ export const MainComposer = ({ onSend, isGenerating, onStop }) => {
           onClick={isGenerating ? onStop : handleSend} 
           isGenerating={isGenerating} 
           hasInput={inputValue.trim().length > 0}
+          idleFloat={!isSmallScreen}
         />
       </div>
     </motion.div>

@@ -11,12 +11,12 @@ const suggestions = [
 
 export const SmartPromptChips = ({ onSelect }) => {
   return (
-    <div className="flex flex-wrap items-center justify-center gap-3 max-w-3xl mx-auto mt-6">
+    <div className="grid w-full grid-cols-2 items-center justify-center gap-x-2 gap-y-1.5 max-w-3xl mx-auto mt-2 sm:mt-6 sm:flex sm:flex-wrap sm:gap-3">
       {suggestions.map((suggestion) => (
         <button
           key={suggestion.id}
           onClick={() => onSelect(suggestion.label)}
-          className="flex items-center gap-2 px-4 py-2 bg-surface-soft border border-border rounded-full text-sm font-medium text-text-secondary hover:text-text-primary hover:border-border/80 hover:shadow-sm hover:-translate-y-0.5 active:scale-97 transition-all"
+          className="flex min-w-0 w-full items-center justify-center gap-1.5 px-1 py-1.5 bg-surface-soft border border-border rounded-full text-xs font-medium text-text-secondary hover:text-text-primary hover:border-border/80 hover:shadow-sm hover:-translate-y-0.5 active:scale-97 transition-all sm:w-auto sm:gap-2 sm:px-4 sm:py-2 sm:text-sm"
         >
           <suggestion.icon size={14} className="text-text-muted" />
           {suggestion.label}
