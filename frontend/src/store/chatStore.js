@@ -79,7 +79,7 @@ export const useChatStore = create((set, get) => ({
       set((state) => ({
         isGenerating: true,
         error: null,
-        messages: state.messages.map(m => m.id === regenerateMessageId ? { ...m, content: "", isError: false } : m)
+        messages: state.messages.map(m => m.id === regenerateMessageId ? { ...m, content: "", isError: false, isStreaming: true } : m)
       }));
     } else {
       set((state) => ({
@@ -88,7 +88,7 @@ export const useChatStore = create((set, get) => ({
         messages: [
           ...state.messages,
           { id: userMessageId, role: "user", content: actualContent },
-          { id: assistantMessageId, role: "assistant", content: "", isError: false }
+          { id: assistantMessageId, role: "assistant", content: "", isError: false, isStreaming: true }
         ]
       }));
     }
@@ -117,65 +117,105 @@ export const useChatStore = create((set, get) => ({
         throw new Error(`HTTP Error: ${response.status}`);
       }
 
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder("utf-8");
-      let done = false;
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error("The response did not include a readable stream.");
 
-      while (!done) {
-        const { value, done: readerDone } = await reader.read();
-        done = readerDone;
-        if (value) {
-          const chunkString = decoder.decode(value, { stream: true });
-          const events = chunkString.split("\n\n");
-          
-          for (const event of events) {
-            if (event.startsWith("data: ")) {
-              try {
-                const dataStr = event.replace("data: ", "").trim();
-                if (!dataStr) continue;
-                
-                const data = JSON.parse(dataStr);
-                
-                if (data.type === "chunk") {
-                  set((state) => ({
-                    messages: state.messages.map((m) => 
-                      m.id === assistantMessageId ? { ...m, content: m.content + data.content } : m
-                    )
-                  }));
-                } else if (data.type === "done") {
-                  set((state) => ({
-                    messages: state.messages.map((m) => 
-                      m.id === assistantMessageId ? { ...m, id: data.message_id, isError: false } : m
-                    ),
-                    isGenerating: false,
-                    abortController: null
-                  }));
-                  get().fetchConversations();
-                } else if (data.type === "start") {
-                  if (userMessageId) {
-                    set((state) => ({
-                      messages: state.messages.map((m) => 
-                        m.id === userMessageId ? { ...m, id: data.user_message_id } : m
-                      )
-                    }));
-                  }
-                } else if (data.type === "sources") {
-                  set((state) => ({
-                    messages: state.messages.map((m) => 
-                      m.id === assistantMessageId ? { ...m, sources: data.sources } : m
-                    )
-                  }));
-                } else if (data.type === "error") {
-                  throw new Error(data.content);
-                }
-              } catch (e) {
-                if (e.message !== "Unexpected end of JSON input" && !e.message.includes("is not valid JSON")) {
-                  console.error("Stream parse error:", e);
-                }
-              }
-            }
-          }
+      const decoder = new TextDecoder("utf-8");
+      let buffer = "";
+      let streamFinished = false;
+      let receivedContent = false;
+
+      const handleEvent = (eventText) => {
+        const dataLines = eventText
+          .split(/\r?\n/)
+          .filter((line) => line.startsWith("data:"))
+          .map((line) => line.slice(5).replace(/^ /, ""));
+        if (dataLines.length === 0) return;
+
+        const dataStr = dataLines.join("\n").trim();
+        if (!dataStr) return;
+
+        let data;
+        try {
+          data = JSON.parse(dataStr);
+        } catch (parseError) {
+          console.error("Stream parse error:", parseError);
+          return;
         }
+
+        if (data.type === "chunk" && typeof data.content === "string") {
+          if (!data.content) return;
+          receivedContent = true;
+          set((state) => ({
+            messages: state.messages.map((message) =>
+              message.id === assistantMessageId
+                ? { ...message, content: message.content + data.content, isStreaming: false }
+                : message
+            ),
+          }));
+        } else if (data.type === "done") {
+          streamFinished = true;
+          set((state) => ({
+            messages: state.messages.map((message) =>
+              message.id === assistantMessageId
+                ? { ...message, id: data.message_id, isError: false, isStreaming: false }
+                : message
+            ),
+            isGenerating: false,
+            abortController: null,
+          }));
+          get().fetchConversations();
+        } else if (data.type === "start") {
+          if (userMessageId) {
+            set((state) => ({
+              messages: state.messages.map((message) =>
+                message.id === userMessageId
+                  ? { ...message, id: data.user_message_id }
+                  : message
+              ),
+            }));
+          }
+        } else if (data.type === "sources") {
+          set((state) => ({
+            messages: state.messages.map((message) =>
+              message.id === assistantMessageId
+                ? { ...message, sources: data.sources }
+                : message
+            ),
+          }));
+        } else if (data.type === "error") {
+          throw new Error(data.content || "An error occurred during generation.");
+        }
+      };
+
+      while (true) {
+        const { value, done: readerDone } = await reader.read();
+        buffer += decoder.decode(value || new Uint8Array(), { stream: !readerDone });
+
+        let boundary;
+        while ((boundary = buffer.match(/\r?\n\r?\n/)) !== null) {
+          const eventText = buffer.slice(0, boundary.index);
+          buffer = buffer.slice(boundary.index + boundary[0].length);
+          handleEvent(eventText);
+        }
+
+        if (readerDone) {
+          if (buffer.trim()) handleEvent(buffer);
+          break;
+        }
+      }
+
+      if (!streamFinished) {
+        set((state) => ({
+          isGenerating: false,
+          abortController: null,
+          error: receivedContent ? state.error : "The response stream ended before a reply arrived.",
+          messages: state.messages.map((message) =>
+            message.id === assistantMessageId
+              ? { ...message, isError: !receivedContent, isStreaming: false }
+              : message
+          ),
+        }));
       }
     } catch (error) {
       if (error.name === "AbortError") {
@@ -183,10 +223,18 @@ export const useChatStore = create((set, get) => ({
       } else {
         set((state) => ({ 
           error: error.message,
-          messages: state.messages.map(m => m.id === assistantMessageId ? { ...m, isError: true } : m)
+          messages: state.messages.map(m => m.id === assistantMessageId ? { ...m, isError: true, isStreaming: false } : m)
         }));
       }
-      set({ isGenerating: false, abortController: null });
+      set((state) => ({
+        isGenerating: false,
+        abortController: null,
+        messages: state.messages.map((message) =>
+          message.id === assistantMessageId
+            ? { ...message, isStreaming: false }
+            : message
+        ),
+      }));
     }
   },
 
@@ -227,6 +275,12 @@ export const useChatStore = create((set, get) => ({
     if (abortController) {
       abortController.abort();
     }
-    set({ isGenerating: false, abortController: null });
+    set((state) => ({
+      isGenerating: false,
+      abortController: null,
+      messages: state.messages.map((message) =>
+        message.isStreaming ? { ...message, isStreaming: false } : message
+      ),
+    }));
   }
 }));

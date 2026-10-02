@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { ArrowUp, Square } from "lucide-react";
 
-export const SendButton = ({ onClick, isGenerating, hasInput }) => {
+export const SendButton = ({ onClick, isGenerating, hasInput, idleFloat = true }) => {
   return (
     <motion.button
       onClick={onClick}
@@ -15,10 +15,12 @@ export const SendButton = ({ onClick, isGenerating, hasInput }) => {
       animate={{
         backgroundColor: isGenerating ? "#172033" : (hasInput ? "#172033" : "#F3F5F8"),
         color: isGenerating ? "#FFFFFF" : (hasInput ? "#FFFFFF" : "#98A2B3"),
-        y: isGenerating ? 0 : [0, -2, 0] // floating idle if not generating
+        y: isGenerating || !idleFloat ? 0 : [0, -2, 0]
       }}
       transition={{
-        y: { duration: 3, repeat: Infinity, ease: "easeInOut" },
+        y: idleFloat && !isGenerating
+          ? { duration: 3, repeat: Infinity, ease: "easeInOut" }
+          : { duration: 0.2 },
         backgroundColor: { duration: 0.2 },
         color: { duration: 0.2 }
       }}
