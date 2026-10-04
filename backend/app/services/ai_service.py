@@ -29,7 +29,10 @@ class GeminiAIService:
 
             response = self.client.models.generate_content(
                 model=self.model,
-                contents=contents
+                contents=contents,
+                config=types.GenerateContentConfig(
+                    thinking_config=types.ThinkingConfig(thinking_level="LOW")
+                )
             )
             return response.text
         except APIError as e:
@@ -83,6 +86,9 @@ class GeminiAIService:
             chat = self.client.chats.create(
                 model=self.model,
                 history=history,
+                config=types.GenerateContentConfig(
+                    thinking_config=types.ThinkingConfig(thinking_level="LOW")
+                )
             )
             logger.info("Gemini chat creation succeeded")
             logger.info("Gemini stream started")
