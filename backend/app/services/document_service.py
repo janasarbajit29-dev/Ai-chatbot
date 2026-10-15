@@ -33,19 +33,19 @@ def save_document(db: Session, user_id: int, file: UploadFile) -> Document:
     file_type = ALLOWED_MIME_TYPES[mime_type]
     original_filename = file.filename
     ext = os.path.splitext(original_filename)[1].lower()
-    
+
     # Also double check extension matches
     valid_exts = {".pdf": "pdf", ".docx": "docx", ".txt": "txt"}
     if ext not in valid_exts or valid_exts[ext] != file_type:
         raise HTTPException(status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail="File extension does not match content type.")
-        
+
     # Check for duplicate document
     existing_doc = db.query(Document).filter(
         Document.user_id == user_id,
         Document.original_filename == original_filename,
         Document.file_size == file_size
     ).first()
-    
+
     if existing_doc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="A document with this name and size already exists.")
 
@@ -76,13 +76,19 @@ def delete_document(db: Session, user_id: int, document_id: int) -> None:
     doc = db.query(Document).filter(Document.id == document_id).first()
     if not doc or doc.user_id != user_id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
-    
+
     # Remove physical file safely
     if os.path.exists(doc.storage_path):
         try:
             os.remove(doc.storage_path)
         except OSError:
             pass # We ignore physical deletion errors to avoid breaking DB state if file is somehow missing/locked
-    
+
     db.delete(doc)
     db.commit()
+
+def get_document_by_id(db: Session, user_id: int, document_id: int) -> Document:
+    doc = db.query(Document).filter(Document.id == document_id).first()
+    if not doc or doc.user_id != user_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
+    return doc

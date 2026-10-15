@@ -149,7 +149,7 @@ def test_rag_chat_with_sources(db_session, mock_genai_client, mock_ai_service):
     user = db_session.query(User).filter_by(email="source1@test.com").first()
     emb = [0.0] * 3072
     emb[0] = 1.0
-    create_mock_doc_and_chunks(db_session, user.id, "resume.pdf", [("I know React", emb)])
+    doc = create_mock_doc_and_chunks(db_session, user.id, "resume.pdf", [("I know React", emb)])
     
     token = get_auth_token("source1@test.com")
     headers = {"Authorization": f"Bearer {token}"}
@@ -159,7 +159,7 @@ def test_rag_chat_with_sources(db_session, mock_genai_client, mock_ai_service):
     
     response = client.post(
         "/api/chat/",
-        json={"conversation_id": conv_id, "content": "What do I know?"},
+        json={"conversation_id": conv_id, "content": "What do I know?", "document_id": doc.id},
         headers=headers
     )
     assert response.status_code == 200
@@ -174,7 +174,7 @@ def test_source_deduplication(db_session, mock_genai_client, mock_ai_service):
     user = db_session.query(User).filter_by(email="source1@test.com").first()
     emb = [0.0] * 3072
     emb[0] = 1.0
-    create_mock_doc_and_chunks(db_session, user.id, "dedup.pdf", [("chunk1", emb), ("chunk2", emb)])
+    doc = create_mock_doc_and_chunks(db_session, user.id, "dedup.pdf", [("chunk1", emb), ("chunk2", emb)])
     
     token = get_auth_token("source1@test.com")
     headers = {"Authorization": f"Bearer {token}"}
@@ -184,7 +184,7 @@ def test_source_deduplication(db_session, mock_genai_client, mock_ai_service):
     
     response = client.post(
         "/api/chat/",
-        json={"conversation_id": conv_id, "content": "Find dedup chunks"},
+        json={"conversation_id": conv_id, "content": "Find dedup chunks", "document_id": doc.id},
         headers=headers
     )
     assert response.status_code == 200
@@ -197,33 +197,21 @@ def test_multiple_documents(db_session, mock_genai_client, mock_ai_service):
     user = db_session.query(User).filter_by(email="source1@test.com").first()
     emb = [0.0] * 3072
     emb[0] = 1.0
-    create_mock_doc_and_chunks(db_session, user.id, "doc1.pdf", [("chunk1", emb)])
-    create_mock_doc_and_chunks(db_session, user.id, "doc2.pdf", [("chunk2", emb)])
+    doc1 = create_mock_doc_and_chunks(db_session, user.id, "doc1.pdf", [("chunk1", emb)])
+    doc2 = create_mock_doc_and_chunks(db_session, user.id, "doc2.pdf", [("chunk2", emb)])
     
-    token = get_auth_token("source1@test.com")
-    headers = {"Authorization": f"Bearer {token}"}
-    
-    res = client.post("/api/conversations/", json={"title": "Test4"}, headers=headers)
-    conv_id = res.json()["id"]
-    
-    response = client.post(
-        "/api/chat/",
-        json={"conversation_id": conv_id, "content": "Find from both"},
-        headers=headers
-    )
-    assert response.status_code == 200
-    data = response.json()
-    
-    filenames = sorted([s["filename"] for s in data["sources"]])
-    assert "doc1.pdf" in filenames
-    assert "doc2.pdf" in filenames
+    from app.services.rag_retrieval_service import retrieve_relevant_chunks
+    chunks = retrieve_relevant_chunks(db_session, user.id, "Find from both", top_k=5, document_id=None)
+    doc_ids = {c.document_id for c in chunks}
+    assert doc1.id in doc_ids
+    assert doc2.id in doc_ids
 
 def test_cross_user_source_protection(db_session, mock_genai_client, mock_ai_service):
     # User 2 uploads a document
     user2 = db_session.query(User).filter_by(email="source2@test.com").first()
     emb = [0.0] * 3072
     emb[0] = 1.0
-    create_mock_doc_and_chunks(db_session, user2.id, "top_secret.pdf", [("secret", emb)])
+    doc2 = create_mock_doc_and_chunks(db_session, user2.id, "top_secret.pdf", [("secret", emb)])
     
     # User 1 queries
     token = get_auth_token("source1@test.com")
@@ -234,7 +222,7 @@ def test_cross_user_source_protection(db_session, mock_genai_client, mock_ai_ser
     
     response = client.post(
         "/api/chat/",
-        json={"conversation_id": conv_id, "content": "What is the secret?"},
+        json={"conversation_id": conv_id, "content": "What is the secret?", "document_id": doc2.id},
         headers=headers
     )
     assert response.status_code == 200
@@ -247,7 +235,7 @@ def test_streaming_sse_source_event(db_session, mock_genai_client, mock_ai_servi
     user = db_session.query(User).filter_by(email="source1@test.com").first()
     emb = [0.0] * 3072
     emb[0] = 1.0
-    create_mock_doc_and_chunks(db_session, user.id, "stream.pdf", [("stream chunk", emb)])
+    doc = create_mock_doc_and_chunks(db_session, user.id, "stream.pdf", [("stream chunk", emb)])
     
     token = get_auth_token("source1@test.com")
     headers = {"Authorization": f"Bearer {token}"}
@@ -257,7 +245,7 @@ def test_streaming_sse_source_event(db_session, mock_genai_client, mock_ai_servi
     
     response = client.post(
         "/api/chat/stream",
-        json={"conversation_id": conv_id, "content": "Streaming query"},
+        json={"conversation_id": conv_id, "content": "Streaming query", "document_id": doc.id},
         headers=headers
     )
     assert response.status_code == 200

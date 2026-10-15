@@ -11,6 +11,7 @@ import { useNavigate } from "react-router-dom";
 import { getGreetingText } from "../utils/greeting";
 import { speak } from "../utils/speech";
 import { useChatStore } from "../store/chatStore";
+import { useDocumentStore } from "../store/documentStore";
 import { Sidebar } from "../components/chat/Sidebar";
 
 export default function Workspace() {
@@ -29,15 +30,24 @@ export default function Workspace() {
   const {
     conversations,
     activeConversation,
+    attachedDocument,
     messages,
+    isLoadingMessages,
+    error,
     isGenerating,
     fetchConversations,
+    createConversation,
     selectConversation,
     sendMessage,
     deleteConversation,
     stopGenerating,
     clearActive,
+    attachDocument,
+    updateAttachedDocument,
+    detachDocument,
   } = useChatStore();
+
+  const { uploadDocument, processDocument } = useDocumentStore();
 
   useEffect(() => {
     if (!currentUser) {
@@ -70,18 +80,6 @@ export default function Workspace() {
     };
   }, [currentUser, hasSpokenGreeting, setHasSpokenGreeting]);
 
-  if (!currentUser) return null;
-
-  const getGreeting = () => getGreetingText(currentUser.name);
-
-  const handleSend = async (text) => {
-    await sendMessage(text);
-  };
-
-  const handleStop = () => {
-    stopGenerating();
-  };
-
   useEffect(() => {
     if (scrollRef.current) {
       const { scrollHeight, clientHeight, scrollTop } = scrollRef.current;
@@ -94,9 +92,86 @@ export default function Workspace() {
         });
       }
     }
-  }, [messages, isGenerating]);
+  }, [messages, isGenerating, attachedDocument]);
 
-  const isChatActive = activeConversation !== null || messages.length > 0;
+  const getGreeting = () =>
+    currentUser ? getGreetingText(currentUser.name) : "Welcome";
+
+  const handleSend = async (text) => {
+    await sendMessage(text);
+  };
+
+  const handleStop = () => {
+    stopGenerating();
+  };
+
+  const handleAttachDocument = async (file) => {
+    let conv = activeConversation;
+    if (!conv) {
+      const convTitle = file.name.replace(/\.[^/.]+$/, "");
+      try {
+        conv = await createConversation(convTitle);
+      } catch (e) {
+        console.error("Failed to create conversation for attachment", e);
+        return;
+      }
+    }
+    if (!conv) return;
+
+    // Set optimistic document state
+    const tempDoc = {
+      id: Date.now(),
+      original_filename: file.name,
+      file_size: file.size,
+      processing_status: "uploaded",
+      extracted_text: null,
+      processing_error: null,
+    };
+    attachDocument(tempDoc, conv.id);
+
+    try {
+      const uploadedDoc = await uploadDocument(file);
+      attachDocument(uploadedDoc, conv.id);
+
+      const processedDoc = await processDocument(uploadedDoc.id);
+      if (processedDoc) {
+        updateAttachedDocument(processedDoc, conv.id);
+      }
+    } catch (err) {
+      console.error("Error attaching document", err);
+      updateAttachedDocument({
+        processing_status: "failed",
+        processing_error:
+          err.response?.data?.detail || err.message || "Failed to process document",
+      }, conv.id);
+    }
+  };
+
+  const handleRetryDocument = async () => {
+    if (!attachedDocument?.id || !activeConversation?.id) return;
+    try {
+      updateAttachedDocument({
+        processing_status: "processing",
+        processing_error: null,
+      }, activeConversation.id);
+      const processedDoc = await processDocument(attachedDocument.id);
+      if (processedDoc) {
+        updateAttachedDocument(processedDoc, activeConversation.id);
+      }
+    } catch (err) {
+      console.error("Retry processing failed", err);
+      updateAttachedDocument({
+        processing_status: "failed",
+        processing_error:
+          err.response?.data?.detail || err.message || "Processing failed",
+      }, activeConversation.id);
+    }
+  };
+
+  if (!currentUser) return null;
+
+  const isChatActive =
+    activeConversation !== null || messages.length > 0 || attachedDocument !== null;
 
   return (
     <div className="relative h-[100dvh] bg-canvas flex overflow-hidden sm:h-screen">
@@ -160,13 +235,20 @@ export default function Workspace() {
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ delay: 0.3, duration: 0.5 }}
-                className="flex-1 overflow-y-auto w-full relative z-10 scroll-smooth hide-scrollbar pb-32 pt-20"
+                transition={{ delay: 0.2, duration: 0.4 }}
+                className="flex-1 overflow-y-auto w-full relative z-10 scroll-smooth hide-scrollbar pb-36 pt-20"
                 ref={scrollRef}
               >
                 <MessageList
                   messages={messages}
                   isGenerating={isGenerating}
+                  isLoadingMessages={isLoadingMessages}
+                  error={error}
+                  onRetryLoadMessages={() => activeConversation && selectConversation(activeConversation)}
+                  attachedDocument={attachedDocument}
+                  onRetryDocument={handleRetryDocument}
+                  onDetachDocument={detachDocument}
+                  onPromptClick={handleSend}
                 />
               </motion.div>
             )}
@@ -175,13 +257,16 @@ export default function Workspace() {
           {/* Composer Area */}
           <div
             className="absolute inset-x-0 bottom-[2%] px-4 z-20 flex flex-col items-center pointer-events-auto max-[600px]:bottom-[15vh] [@media(min-height:900px)]:max-[600px]:bottom-[18vh] [@media(max-height:600px)]:max-[600px]:bottom-[5.5%] sm:bottom-[12%]"
-            style={isChatActive ? { bottom: "32px" } : undefined}
+            style={isChatActive ? { bottom: "28px" } : undefined}
           >
             <div className="w-full max-w-3xl flex flex-col items-center gap-3 sm:gap-6">
               <MainComposer
                 onSend={handleSend}
                 isGenerating={isGenerating}
                 onStop={handleStop}
+                attachedDocument={attachedDocument}
+                onAttachDocument={handleAttachDocument}
+                onDetachDocument={detachDocument}
               />
 
               {!isChatActive && (

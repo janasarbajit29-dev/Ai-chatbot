@@ -1,41 +1,95 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { Copy, ThumbsUp, ThumbsDown, RotateCcw, MoreHorizontal } from "lucide-react";
+import { Copy, RotateCcw, Loader2, AlertCircle } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { AIOrb } from "../core/AIOrb";
 import { useChatStore } from "../../store/chatStore";
+import { DocumentAttachmentCard } from "./DocumentAttachmentCard";
 
-export const MessageList = ({ messages, isGenerating }) => {
+export const MessageList = ({
+  messages,
+  isGenerating,
+  isLoadingMessages,
+  error,
+  onRetryLoadMessages,
+  attachedDocument,
+  onRetryDocument,
+  onDetachDocument,
+  onPromptClick,
+}) => {
   const sendMessage = useChatStore((state) => state.sendMessage);
-  const isThinking = isGenerating && messages.some(
-    (message) => message.role === "assistant" && message.isStreaming && !message.content
-  );
+  const isThinking =
+    isGenerating &&
+    messages.some(
+      (message) =>
+        message.role === "assistant" && message.isStreaming && !message.content
+    );
 
   return (
     <div className="w-full max-w-4xl mx-auto pb-32 pt-24 px-4 flex flex-col gap-8">
-      <AnimatePresence initial={false}>
-        {messages.map((msg, index) => (
-          <MessageBubble
-            key={msg.id || index}
-            message={msg}
-            isLast={index === messages.length - 1}
-            onRegenerate={(id) => sendMessage(null, id)}
-          />
-        ))}
-        {isThinking && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9 }}
-            className="flex flex-col items-start w-full max-w-3xl"
-          >
-            <div className="flex items-center gap-3 mb-2">
-              <AIOrb size="small" state="thinking" />
-              <span className="text-sm font-medium text-text-secondary animate-pulse">Thinking...</span>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Attached Document Card in Conversation */}
+      {attachedDocument && (
+        <DocumentAttachmentCard
+          document={attachedDocument}
+          onRetry={onRetryDocument}
+          onDetach={onDetachDocument}
+          onPromptClick={onPromptClick}
+          isGenerating={isGenerating}
+        />
+      )}
+
+      {isLoadingMessages ? (
+        <div className="flex flex-col items-center justify-center py-20 gap-3 text-text-secondary">
+          <Loader2 className="w-6 h-6 animate-spin text-accent-primary" />
+          <span className="text-sm font-medium">Loading messages...</span>
+        </div>
+      ) : error ? (
+        <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
+          <div className="p-3 bg-red-500/10 text-red-500 rounded-full">
+            <AlertCircle size={22} />
+          </div>
+          <p className="text-sm text-text-secondary max-w-sm">{error}</p>
+          {onRetryLoadMessages && (
+            <button
+              onClick={onRetryLoadMessages}
+              className="mt-2 inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-accent-primary bg-accent-primary/10 hover:bg-accent-primary/20 rounded-lg transition-colors border border-accent-primary/20"
+            >
+              <RotateCcw size={14} />
+              <span>Retry</span>
+            </button>
+          )}
+        </div>
+      ) : messages.length === 0 ? (
+        <div className="text-center text-text-secondary text-sm py-16 opacity-60">
+          No messages in this conversation yet.
+        </div>
+      ) : (
+        <AnimatePresence initial={false}>
+          {messages.map((msg, index) => (
+            <MessageBubble
+              key={msg.id || index}
+              message={msg}
+              isLast={index === messages.length - 1}
+              onRegenerate={(id) => sendMessage(null, id)}
+            />
+          ))}
+          {isThinking && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="flex flex-col items-start w-full max-w-3xl"
+            >
+              <div className="flex items-center gap-3 mb-2">
+                <AIOrb size="small" state="thinking" />
+                <span className="text-sm font-medium text-text-secondary animate-pulse">
+                  Thinking...
+                </span>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      )}
     </div>
   );
 };
@@ -78,7 +132,9 @@ const MessageBubble = ({ message, isLast, onRegenerate }) => {
                         <div className="w-3 h-3 rounded-full bg-yellow-500/80"></div>
                         <div className="w-3 h-3 rounded-full bg-green-500/80"></div>
                       </div>
-                      <span className="text-xs font-medium text-slate-400">Code</span>
+                      <span className="text-xs font-medium text-slate-400">
+                        Code
+                      </span>
                     </div>
                     <div className="p-4 overflow-x-auto text-sm font-mono text-slate-50">
                       <pre {...props}>{children}</pre>
@@ -122,19 +178,6 @@ const MessageBubble = ({ message, isLast, onRegenerate }) => {
           </div>
         )}
 
-        {message.sources && message.sources.length > 0 && (
-          <div className="mt-4 pt-3 border-t border-border/50">
-            <div className="text-[11px] font-semibold text-text-muted uppercase tracking-wider mb-2">Sources</div>
-            <div className="flex flex-wrap gap-2">
-              {message.sources.map((src, i) => (
-                <div key={i} className="flex items-center gap-1.5 px-2 py-1 bg-surface-hover rounded border border-border/60 text-xs text-text-secondary">
-                  <span className="text-[10px]">📄</span>
-                  <span className="truncate max-w-[200px]">{src.filename}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
 
         {!isUser && !message.isError && (
           <div className="absolute left-2 -bottom-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center gap-1 pt-2">

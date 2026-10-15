@@ -5,6 +5,7 @@ from app.schemas.message import MessageResponse
 class ChatRequest(BaseModel):
     conversation_id: int
     content: str = Field(..., min_length=1, max_length=20000)
+    document_id: Optional[int] = None
 
 class ChatSource(BaseModel):
     document_id: int
