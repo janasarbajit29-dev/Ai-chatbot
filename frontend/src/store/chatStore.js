@@ -1,16 +1,88 @@
 import { create } from 'zustand';
 import { apiClient } from '../lib/axios';
 import { getAccessToken } from '../utils/auth';
+import { useDocumentStore } from './documentStore';
+
+const ATTACHMENTS_STORAGE_KEY = "aura_conversation_attachments";
+
+const loadSavedAttachments = () => {
+  try {
+    const raw = localStorage.getItem(ATTACHMENTS_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch (_e) {
+    return {};
+  }
+};
+
+const persistAttachments = (attachments) => {
+  try {
+    localStorage.setItem(ATTACHMENTS_STORAGE_KEY, JSON.stringify(attachments));
+  } catch (e) {
+    console.error("Failed to save attachments to localStorage", e);
+  }
+};
 
 export const useChatStore = create((set, get) => ({
   conversations: [],
   activeConversation: null,
+  attachedDocument: null,
+  conversationAttachments: loadSavedAttachments(),
   messages: [],
   isLoadingConversations: false,
   isLoadingMessages: false,
   isGenerating: false,
   error: null,
   abortController: null,
+  messagesAbortController: null,
+
+  attachDocument: (document, targetConvId = null) => {
+    const { activeConversation, conversationAttachments } = get();
+    const convId = targetConvId || activeConversation?.id;
+    const updated = convId
+      ? { ...conversationAttachments, [convId]: document }
+      : conversationAttachments;
+    if (convId) {
+      persistAttachments(updated);
+    }
+    set({
+      attachedDocument: (!convId || convId === activeConversation?.id) ? document : get().attachedDocument,
+      conversationAttachments: updated,
+    });
+  },
+
+  updateAttachedDocument: (updates, targetConvId = null) => {
+    const { activeConversation, conversationAttachments } = get();
+    const convId = targetConvId || activeConversation?.id;
+    const current = (convId && conversationAttachments[convId]) || get().attachedDocument;
+    if (!current) return;
+    const merged = { ...current, ...updates };
+    const updated = convId
+      ? { ...conversationAttachments, [convId]: merged }
+      : conversationAttachments;
+    if (convId) {
+      persistAttachments(updated);
+    }
+    set({
+      attachedDocument: (!convId || convId === activeConversation?.id) ? merged : get().attachedDocument,
+      conversationAttachments: updated,
+    });
+  },
+
+  detachDocument: (documentId = null) => {
+    const { activeConversation, conversationAttachments, attachedDocument } = get();
+    if (documentId && attachedDocument && attachedDocument.id !== documentId) {
+      return;
+    }
+    const updated = { ...conversationAttachments };
+    if (activeConversation) {
+      delete updated[activeConversation.id];
+      persistAttachments(updated);
+    }
+    set({
+      attachedDocument: null,
+      conversationAttachments: updated,
+    });
+  },
 
   fetchConversations: async () => {
     set({ isLoadingConversations: true, error: null });
@@ -23,13 +95,19 @@ export const useChatStore = create((set, get) => ({
   },
 
   createConversation: async (title = "New Chat") => {
+    if (get().messagesAbortController) {
+      get().messagesAbortController.abort();
+    }
     set({ isGenerating: true, error: null });
     try {
       const response = await apiClient.post('/api/conversations/', { title });
-      set((state) => ({ 
+      set((state) => ({
         conversations: [response.data, ...state.conversations],
         activeConversation: response.data,
+        attachedDocument: null,
         messages: [],
+        isLoadingMessages: false,
+        messagesAbortController: null,
         isGenerating: false
       }));
       return response.data;
@@ -40,25 +118,93 @@ export const useChatStore = create((set, get) => ({
   },
 
   selectConversation: async (conversation) => {
+    if (!conversation) return;
     if (get().activeConversation?.id === conversation.id) return;
-    set({ activeConversation: conversation, isLoadingMessages: true, messages: [], error: null });
+
+    if (get().isGenerating) {
+      get().stopGenerating();
+    }
+
+    if (get().messagesAbortController) {
+      get().messagesAbortController.abort();
+    }
+
+    const controller = new AbortController();
+    const savedDoc = (conversation && get().conversationAttachments[conversation.id]) || null;
+
+    set({
+      activeConversation: conversation,
+      attachedDocument: savedDoc,
+      isLoadingMessages: true,
+      messages: [],
+      error: null,
+      messagesAbortController: controller,
+    });
+
+    if (savedDoc && typeof savedDoc.id === 'number' && savedDoc.id > 0) {
+      useDocumentStore.getState().fetchDocument(savedDoc.id).then((freshDoc) => {
+        if (freshDoc && get().activeConversation?.id === conversation.id) {
+          get().updateAttachedDocument(freshDoc, conversation.id);
+        }
+      }).catch(() => {});
+    }
+
     try {
-      const response = await apiClient.get(`/api/conversations/${conversation.id}/messages`);
-      set({ messages: response.data, isLoadingMessages: false });
+      const response = await apiClient.get(`/api/conversations/${conversation.id}/messages`, {
+        signal: controller.signal,
+      });
+
+      if (get().activeConversation?.id === conversation.id) {
+        set({
+          messages: response.data || [],
+          isLoadingMessages: false,
+          messagesAbortController: null,
+          error: null,
+        });
+      }
     } catch (error) {
-      set({ error: error.message, isLoadingMessages: false });
+      if (
+        error?.name === "CanceledError" ||
+        error?.name === "AbortError" ||
+        error?.code === "ERR_CANCELED" ||
+        error?.message === "canceled"
+      ) {
+        return;
+      }
+
+      if (get().activeConversation?.id === conversation.id) {
+        set({
+          error:
+            error.response?.data?.detail ||
+            error.message ||
+            "Failed to load messages",
+          isLoadingMessages: false,
+          messagesAbortController: null,
+        });
+      }
     }
   },
 
   sendMessage: async (content, regenerateMessageId = null) => {
     let { activeConversation, messages } = get();
-    
+
     if (!activeConversation) {
       try {
         activeConversation = await get().createConversation("New Chat");
-      } catch (err) {
+      } catch (_err) {
         return;
       }
+    }
+
+    // Determine the attached document strictly for the active conversation
+    const currentAttachments = get().conversationAttachments || {};
+    const attachedForThisConv = (activeConversation && currentAttachments[activeConversation.id]) || null;
+    const documentIdToSend = (attachedForThisConv && typeof attachedForThisConv.id === 'number' && attachedForThisConv.id > 0)
+      ? attachedForThisConv.id
+      : null;
+
+    if (get().attachedDocument !== attachedForThisConv) {
+      set({ attachedDocument: attachedForThisConv });
     }
 
     if (activeConversation.title === "New Chat" || activeConversation.title === "New Conversation") {
@@ -95,7 +241,7 @@ export const useChatStore = create((set, get) => ({
 
     const controller = new AbortController();
     set({ abortController: controller });
-    
+
     try {
       const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000";
       const token = getAccessToken();
@@ -108,7 +254,8 @@ export const useChatStore = create((set, get) => ({
         },
         body: JSON.stringify({
           conversation_id: activeConversation.id,
-          content: actualContent
+          content: actualContent,
+          document_id: documentIdToSend
         }),
         signal: controller.signal
       });
@@ -221,7 +368,7 @@ export const useChatStore = create((set, get) => ({
       if (error.name === "AbortError") {
         console.log("Stream aborted");
       } else {
-        set((state) => ({ 
+        set((state) => ({
           error: error.message,
           messages: state.messages.map(m => m.id === assistantMessageId ? { ...m, isError: true, isStreaming: false } : m)
         }));
@@ -253,23 +400,61 @@ export const useChatStore = create((set, get) => ({
 
   deleteConversation: async (conversationId) => {
     try {
+      const isActiveDeleted = get().activeConversation?.id === conversationId;
+      if (isActiveDeleted) {
+        if (get().isGenerating) {
+          get().stopGenerating();
+        }
+        if (get().messagesAbortController) {
+          get().messagesAbortController.abort();
+        }
+      }
+
       await apiClient.delete(`/api/conversations/${conversationId}`);
+      const updatedAttachments = { ...get().conversationAttachments };
+      delete updatedAttachments[conversationId];
+      persistAttachments(updatedAttachments);
+
       set((state) => {
         const filtered = state.conversations.filter(c => c.id !== conversationId);
-        const isActiveDeleted = state.activeConversation?.id === conversationId;
         return {
           conversations: filtered,
           activeConversation: isActiveDeleted ? null : state.activeConversation,
-          messages: isActiveDeleted ? [] : state.messages
+          attachedDocument: isActiveDeleted ? null : state.attachedDocument,
+          conversationAttachments: updatedAttachments,
+          messages: isActiveDeleted ? [] : state.messages,
+          isLoadingMessages: isActiveDeleted ? false : state.isLoadingMessages,
+          messagesAbortController: isActiveDeleted ? null : state.messagesAbortController,
+          error: isActiveDeleted ? null : state.error,
         };
       });
     } catch (error) {
-      set({ error: error.message });
+      set({
+        error:
+          error.response?.data?.detail ||
+          error.message ||
+          "Failed to delete conversation",
+      });
     }
   },
 
-  clearActive: () => set({ activeConversation: null, messages: [] }),
-  
+  clearActive: () => {
+    if (get().isGenerating) {
+      get().stopGenerating();
+    }
+    if (get().messagesAbortController) {
+      get().messagesAbortController.abort();
+    }
+    set({
+      activeConversation: null,
+      messages: [],
+      attachedDocument: null,
+      isLoadingMessages: false,
+      error: null,
+      messagesAbortController: null,
+    });
+  },
+
   stopGenerating: () => {
     const { abortController } = get();
     if (abortController) {

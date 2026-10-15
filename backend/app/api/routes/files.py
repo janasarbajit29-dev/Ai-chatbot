@@ -33,6 +33,15 @@ def list_files(
 ):
     return document_service.get_user_documents(db, current_user.id)
 
+@router.get("/{file_id}", response_model=DocumentResponse, summary="Get a document by ID")
+def get_file(
+    file_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    return document_service.get_document_by_id(db, current_user.id, file_id)
+
+
 @router.delete("/{file_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Delete a file")
 def delete_file(
     file_id: int,

@@ -10,6 +10,7 @@ from app.services import conversation_service
 
 router = APIRouter(tags=["Conversations"])
 
+@router.post("", response_model=ConversationResponse, status_code=status.HTTP_201_CREATED, include_in_schema=False)
 @router.post("/", response_model=ConversationResponse, status_code=status.HTTP_201_CREATED, summary="Create a new conversation")
 def create_conversation(
     schema: ConversationCreate,
@@ -18,6 +19,7 @@ def create_conversation(
 ):
     return conversation_service.create_conversation(db, current_user.id, schema)
 
+@router.get("", response_model=List[ConversationResponse], include_in_schema=False)
 @router.get("/", response_model=List[ConversationResponse], summary="Get all conversations for the current user")
 def get_user_conversations(
     db: Session = Depends(get_db),

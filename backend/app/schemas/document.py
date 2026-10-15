@@ -14,5 +14,6 @@ class DocumentResponse(BaseModel):
     updated_at: datetime
     processed_at: Optional[datetime] = None
     chunks_count: Optional[int] = None
+    extracted_text: Optional[str] = None
 
     model_config = {"from_attributes": True}
